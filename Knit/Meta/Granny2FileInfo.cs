@@ -13,7 +13,7 @@ public record struct Granny2FileInfo {
 	public Granny2SectorPointer Sectors { get; set; }
 	public Granny2Reference RootTypeDefinition { get; set; }
 	public Granny2Reference Root { get; set; }
-	public uint Type { get; set; }
+	public Granny2Tag Tag { get; set; }
 	public Granny2ExtraTags ExtraTags { get; set; }
 	public uint StringChecksum { get; set; }
 

@@ -18,5 +18,5 @@ public record struct Granny2Header {
 	public bool IsV6 => Magic == Granny32_6_LE;
 	public bool IsV7 => Magic == Granny32_7_LE || Magic == Granny64_7_LE;
 	public bool IsValid => IsV6 || IsV7;
-	public bool IsSupported => Version is LatestVersion && !IsValid;
+	public bool IsSupported => Version is LatestVersion && IsValid;
 }
