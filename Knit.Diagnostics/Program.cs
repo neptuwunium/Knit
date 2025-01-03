@@ -32,6 +32,10 @@ internal static class Program {
 			Console.WriteLine($"\t\tVersion: {granny.Header.Version}");
 			Console.WriteLine($"\t\tSize: {granny.Header.HeaderSize}");
 			Console.WriteLine($"\t\tIs Supported: {granny.Header.IsSupported}");
+			Console.WriteLine($"\t\tIs 64-bit: {granny.Header.Is64Bit}");
+			Console.WriteLine($"\t\tIs Version 6: {granny.Header.IsV6}");
+			Console.WriteLine($"\t\tIs Version 7: {granny.Header.IsV7}");
+			Console.WriteLine($"\t\tIs Big-Endian: {granny.Header.IsBigEndian}");
 
 			Console.WriteLine("\tFileInfo:");
 			Console.WriteLine($"\t\tVersion: {granny.FileInfo.Version}");

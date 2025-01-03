@@ -32,4 +32,6 @@ public struct Granny2Magic : IEquatable<Granny2Magic> {
 	public static bool operator !=(Granny2Magic left, Span<uint> right) => !(left == right);
 	public static bool operator ==(Granny2Magic left, ReadOnlySpan<uint> right) => left.Equals(right);
 	public static bool operator !=(Granny2Magic left, ReadOnlySpan<uint> right) => !(left == right);
+
+	public override string ToString() => $"{this[0]:x8}{this[1]:x8}{this[2]:x8}{this[3]:x8}";
 }
