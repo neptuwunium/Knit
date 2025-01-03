@@ -45,7 +45,7 @@ internal static class Program {
 			Console.WriteLine($"\t\tString Checksum: {granny.FileInfo.StringChecksum:x8}");
 			Console.WriteLine($"\t\tRoot Definition: {granny.FileInfo.RootTypeDefinition}");
 			Console.WriteLine($"\t\tRoot Object: {granny.FileInfo.Root}");
-			Console.WriteLine($"\t\tTag: {granny.FileInfo.Tag:x8}");
+			Console.WriteLine($"\t\tTag: {granny.FileInfo.Tag}");
 			Console.WriteLine($"\t\tExtra Tags: {granny.FileInfo.ExtraTags}");
 
 			Console.WriteLine("\tSections:");

@@ -1,12 +1,12 @@
 namespace Knit.Meta;
 
 public enum Granny2SectorId {
-	Primary,
-	RigidVertex,
-	RigidIndex,
-	DeformableVertex,
-	DeformableIndex,
+	Root,
+	Vertex0,
+	Index0,
+	Vertex1,
+	Index1,
 	Texture,
-	Discardable,
-	Unloaded,
+	Type,
+	Junk,
 }
