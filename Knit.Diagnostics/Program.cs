@@ -63,6 +63,7 @@ internal static class Program {
 				Console.WriteLine($"\t\t\tCompression: {sector.Compression}");
 				Console.WriteLine($"\t\t\tCompression Bits: {sector.CompressionBits1:b32}{sector.CompressionBits2:b32}");
 				Console.WriteLine($"\t\t\tAlignment: {sector.Alignment}");
+				Console.WriteLine($"\t\t\tSize: {sector.UncompressedSize}");
 				Console.WriteLine($"\t\t\tData Pointer: {sector.Data}");
 				Console.WriteLine($"\t\t\tFixup Pointer: {sector.Fixup}");
 				Console.WriteLine($"\t\t\tMarshalled Fixup Pointer: {sector.MarshalledFixup}");
