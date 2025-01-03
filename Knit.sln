@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Knit", "Knit\Knit.csproj", "{C78AFD99-9480-4C13-9207-3E3647577A92}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Knit.Diagnostics", "Knit.Diagnostics\Knit.Diagnostics.csproj", "{C670A85C-3146-4161-BA56-564A073A473E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{C78AFD99-9480-4C13-9207-3E3647577A92}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C78AFD99-9480-4C13-9207-3E3647577A92}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C78AFD99-9480-4C13-9207-3E3647577A92}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C670A85C-3146-4161-BA56-564A073A473E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C670A85C-3146-4161-BA56-564A073A473E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C670A85C-3146-4161-BA56-564A073A473E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C670A85C-3146-4161-BA56-564A073A473E}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
