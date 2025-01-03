@@ -35,7 +35,7 @@ internal static class Program {
 			Console.WriteLine($"\t\tIs 64-bit: {granny.Header.Is64Bit}");
 			Console.WriteLine($"\t\tIs Version 6: {granny.Header.IsV6}");
 			Console.WriteLine($"\t\tIs Version 7: {granny.Header.IsV7}");
-			Console.WriteLine($"\t\tIs Big-Endian: {granny.Header.IsBigEndian}");
+			Console.WriteLine($"\t\tIs Little-Endian: {granny.Header.IsLittleEndian}");
 
 			Console.WriteLine("\tFileInfo:");
 			Console.WriteLine($"\t\tVersion: {granny.FileInfo.Version}");
@@ -61,7 +61,8 @@ internal static class Program {
 
 				Console.WriteLine();
 				Console.WriteLine($"\t\t\tCompression: {sector.Compression}");
-				Console.WriteLine($"\t\t\tCompression Bits: {sector.CompressionBits1:b32}{sector.CompressionBits2:b32}");
+				Console.WriteLine($"\t\t\tCompression Bits 1: {sector.CompressionBits1:b32} ({sector.CompressionBits1})");
+				Console.WriteLine($"\t\t\tCompression Bits 2: {sector.CompressionBits2:b32} ({sector.CompressionBits2})");
 				Console.WriteLine($"\t\t\tAlignment: {sector.Alignment}");
 				Console.WriteLine($"\t\t\tSize: {sector.UncompressedSize}");
 				Console.WriteLine($"\t\t\tData Pointer: {sector.Data}");

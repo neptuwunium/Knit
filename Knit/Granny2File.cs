@@ -8,8 +8,13 @@ namespace Knit;
 public sealed class Granny2File : IDisposable {
 	public Granny2File(Stream stream) {
 		var header = new Granny2Header();
-		stream.ReadExactly(MemoryMarshal.AsBytes(new Span<Granny2Header>(ref header)));
+		var headerSpan = new Span<Granny2Header>(ref header);
+		stream.ReadExactly(MemoryMarshal.AsBytes(headerSpan));
 		Header = header;
+
+		if (header.ShouldConvertEndianness) {
+			MemoryMarshal.AsBytes(headerSpan)[16..].Reverse32();
+		}
 
 		if (!header.IsSupported) {
 			throw new NotSupportedException();
@@ -17,11 +22,15 @@ public sealed class Granny2File : IDisposable {
 
 		HeaderData = MemoryPool<byte>.Shared.Rent(header.HeaderSize);
 		var headerData = HeaderData.Memory[..header.HeaderSize];
-		var headerSpan = headerData.Span;
+		var headerDataSpan = headerData.Span;
 		stream.Position = 0;
-		stream.ReadExactly(headerSpan);
+		stream.ReadExactly(headerDataSpan);
 
-		FileInfo = MemoryMarshal.Read<Granny2FileInfo>(headerSpan[Unsafe.SizeOf<Granny2Header>()..]);
+		if (header.ShouldConvertEndianness) {
+			headerDataSpan.Reverse32();
+		}
+
+		FileInfo = MemoryMarshal.Read<Granny2FileInfo>(headerDataSpan[Unsafe.SizeOf<Granny2Header>()..]);
 		Sectors = HeaderData.Memory[(Unsafe.SizeOf<Granny2Header>() + FileInfo.Sectors.Offset)..].Cast<Granny2Sector>()[..FileInfo.Sectors.Count];
 
 		if (!FileInfo.IsSupported) {

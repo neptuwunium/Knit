@@ -4,7 +4,7 @@ public enum Granny2CompressionType {
 	None,
 
 	// granny2_x64.dll has different methods for Oodle0 and Oodle1.
-	// Oodle0 is functionally the same as Oodle1, but the parameters are in a slightly different layout.
+	// Oodle0 is functionally the same as Oodle1, but reverses the entire data buffer if the endianness mismatches.
 	// This is not a modern Oodle super-compressor like Kraken or Mermaid, but a legacy compressor (likely LZF/LZW.)
 	Oodle0,
 	Oodle1,
