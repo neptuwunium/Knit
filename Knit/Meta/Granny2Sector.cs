@@ -14,5 +14,5 @@ public record struct Granny2Sector {
 	public Granny2SectorPointer MarshalledFixup { get; set; }
 
 	public bool IsEmpty => UncompressedSize == 0;
-	public bool IsSupported => Compression is not Granny2CompressionType.None; // need to implement Oodle1 and BitKnit1
+	public bool IsSupported => Compression is Granny2CompressionType.None; // need to implement Oodle1 and BitKnit1
 }
