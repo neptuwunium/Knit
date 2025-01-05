@@ -31,7 +31,7 @@ public sealed class Granny2File : IDisposable {
 		}
 
 		FileInfo = MemoryMarshal.Read<Granny2FileInfo>(headerDataSpan[Unsafe.SizeOf<Granny2Header>()..]);
-		Sectors = HeaderData.Memory[(Unsafe.SizeOf<Granny2Header>() + FileInfo.Sectors.Offset)..].Cast<Granny2Sector>()[..FileInfo.Sectors.Count];
+		Sections = HeaderData.Memory[(Unsafe.SizeOf<Granny2Header>() + FileInfo.Sections.Offset)..].Cast<Granny2Section>()[..FileInfo.Sections.Count];
 
 		if (!FileInfo.IsSupported) {
 			HeaderData.Dispose();
@@ -39,8 +39,8 @@ public sealed class Granny2File : IDisposable {
 		}
 
 		var totalSize = 0;
-		foreach (var sector in Sectors.Span) {
-			totalSize += sector.UncompressedSize;
+		foreach (var section in Sections.Span) {
+			totalSize += section.UncompressedSize;
 		}
 
 		FileData = MemoryPool<byte>.Shared.Rent(totalSize);
@@ -48,7 +48,7 @@ public sealed class Granny2File : IDisposable {
 
 	public Granny2Header Header { get; }
 	public Granny2FileInfo FileInfo { get; }
-	public Memory<Granny2Sector> Sectors { get; }
+	public Memory<Granny2Section> Sections { get; }
 
 	private IMemoryOwner<byte> HeaderData { get; }
 	private IMemoryOwner<byte> FileData { get; }

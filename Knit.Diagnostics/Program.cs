@@ -49,27 +49,27 @@ internal static class Program {
 			Console.WriteLine($"\t\tExtra Tags: {granny.FileInfo.ExtraTags}");
 
 			Console.WriteLine("\tSections:");
-			var sectors = granny.Sectors.Span;
+			var sections = granny.Sections.Span;
 			var unsupportedCompressions = new HashSet<Granny2CompressionType>();
-			for (var i = 0; i < sectors.Length; ++i) {
-				var sector = sectors[i];
-				Console.Write($"\t\t{(Granny2SectorId) i:G}:");
-				if (sector.IsEmpty) {
+			for (var i = 0; i < sections.Length; ++i) {
+				var section = sections[i];
+				Console.Write($"\t\t{(Granny2SectionId) i:G}:");
+				if (section.IsEmpty) {
 					Console.WriteLine(" empty");
 					continue;
 				}
 
 				Console.WriteLine();
-				Console.WriteLine($"\t\t\tCompression: {sector.Compression}");
-				Console.WriteLine($"\t\t\tCompression Bits 1: {sector.CompressionBits1:b32} ({sector.CompressionBits1})");
-				Console.WriteLine($"\t\t\tCompression Bits 2: {sector.CompressionBits2:b32} ({sector.CompressionBits2})");
-				Console.WriteLine($"\t\t\tAlignment: {sector.Alignment}");
-				Console.WriteLine($"\t\t\tSize: {sector.UncompressedSize}");
-				Console.WriteLine($"\t\t\tData Pointer: {sector.Data}");
-				Console.WriteLine($"\t\t\tFixup Pointer: {sector.Fixup}");
-				Console.WriteLine($"\t\t\tMarshalled Fixup Pointer: {sector.MarshalledFixup}");
-				if (!sector.IsSupported) {
-					unsupportedCompressions.Add(sector.Compression);
+				Console.WriteLine($"\t\t\tCompression: {section.Compression}");
+				Console.WriteLine($"\t\t\tCompression Bits 1: {section.CompressionBits1:b32} ({section.CompressionBits1})");
+				Console.WriteLine($"\t\t\tCompression Bits 2: {section.CompressionBits2:b32} ({section.CompressionBits2})");
+				Console.WriteLine($"\t\t\tAlignment: {section.Alignment}");
+				Console.WriteLine($"\t\t\tSize: {section.UncompressedSize}");
+				Console.WriteLine($"\t\t\tData Pointer: {section.Data}");
+				Console.WriteLine($"\t\t\tFixup Pointer: {section.Fixup}");
+				Console.WriteLine($"\t\t\tMarshalled Fixup Pointer: {section.MarshalledFixup}");
+				if (!section.IsSupported) {
+					unsupportedCompressions.Add(section.Compression);
 				}
 			}
 

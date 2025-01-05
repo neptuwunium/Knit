@@ -1,16 +1,16 @@
 namespace Knit.Meta;
 
 public enum Granny2CompressionType {
-	None,
+	None = 0,
 
 	// granny2_x64.dll has different methods for Oodle0 and Oodle1.
 	// Oodle0 is functionally the same as Oodle1, but reverses the entire data buffer if the endianness mismatches.
-	// This is not a modern Oodle super-compressor like Kraken or Mermaid, but a legacy compressor (likely LZF/LZW.)
-	Oodle0,
-	Oodle1,
+	// This is not a modern Oodle super-compressor like Kraken or Mermaid, but a LZ77 + arithmetic coding algorithm.
+	Oodle0 = 1,
+	Oodle1 = 2,
 
-	// granny2_x64.dll considers BitKnit0 and BitKnit1 the same.
-	// I assume 0 is a 32-bit variant since BitKnit1 punts all types to 64-bit which it does not do for Oodle0 and 1.
-	BitKnit0,
-	BitKnit1,
+	// BitKnit1 is identical to BitKnit2, BitKnit2 has an encode bugfix. Both should be decodable with the same decoder.
+	// https://fgiesen.wordpress.com/2023/05/06/a-very-brief-bitknit-retrospective/#comment-26615
+	BitKnit1 = 3,
+	BitKnit2 = 4,
 }

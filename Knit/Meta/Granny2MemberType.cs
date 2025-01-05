@@ -1,0 +1,28 @@
+namespace Knit.Meta;
+
+public enum Granny2MemberType {
+	End = 0,
+	Inline = 1,
+	Reference = 2,
+	ReferenceToArray = 3,
+	ArrayOfReferences = 4,
+	VariantReference = 5,
+	SwitchableType = 6,
+	ReferenceToVariantArray = 7,
+	String = 8,
+	Transform = 9,
+	Real32 = 10,
+	Int8 = 11,
+	UInt8 = 12,
+	BinormalInt8 = 13,
+	NormalUInt8 = 14,
+	Int16 = 15,
+	UInt16 = 16,
+	BinormalInt16 = 17,
+	NormalUInt16 = 18,
+	Int32 = 19,
+	UInt32 = 20,
+	Real16 = 21,
+	EmptyReference = 22,
+	Bool = Int32,
+}

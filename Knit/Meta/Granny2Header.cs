@@ -1,12 +1,9 @@
-using System.Buffers.Binary;
-using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace Knit.Meta;
 
 [StructLayout(LayoutKind.Sequential, Pack = 4, Size = 0x20)]
 public record struct Granny2Header {
-	// note: we don't support Big Endian
 	public static readonly Granny2Magic Granny32_6_LE = new(0xCAB067B8, 0x0FB16DF8, 0x7E8C7284, 0x1E00195E);
 	public static readonly Granny2Magic Granny32_6_BE = new(0xB867B0CA, 0xF86DB10F, 0x84728C7E, 0x5E19001E);
 	public static readonly Granny2Magic Granny32_7_LE = new(0xC06CDE29, 0x2B53A4BA, 0xA5B7F525, 0xEEE266F6);

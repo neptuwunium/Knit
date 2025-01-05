@@ -10,7 +10,7 @@ public record struct Granny2FileInfo {
 	public uint Version { get; set; }
 	public int FileSize { get; set; }
 	public uint Checksum { get; set; }
-	public Granny2SectorPointer Sectors { get; set; }
+	public Granny2SectionPointer Sections { get; set; }
 	public Granny2Reference RootTypeDefinition { get; set; }
 	public Granny2Reference Root { get; set; }
 	public Granny2Tag Tag { get; set; }
