@@ -1,12 +1,14 @@
 using System.Buffers;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using Knit.Compression;
 using Knit.Meta;
 
 namespace Knit;
 
 public sealed class Granny2File : IDisposable {
-	public Granny2File(Stream stream) {
+	public Granny2File(Stream stream, bool softLoad = false) {
 		var header = new Granny2Header();
 		var headerSpan = new Span<Granny2Header>(ref header);
 		stream.ReadExactly(MemoryMarshal.AsBytes(headerSpan));
@@ -38,12 +40,49 @@ public sealed class Granny2File : IDisposable {
 			throw new NotSupportedException();
 		}
 
+		if (softLoad) {
+			FileData = MemoryPool<byte>.Shared.Rent(1);
+			return;
+		}
+
 		var totalSize = 0;
 		foreach (var section in Sections.Span) {
 			totalSize += section.UncompressedSize;
 		}
 
 		FileData = MemoryPool<byte>.Shared.Rent(totalSize);
+		var cursor = 0;
+		var fileData = FileData.Memory.Span;
+		foreach (var section in Sections.Span) {
+			if (section.IsEmpty) {
+				continue;
+			}
+
+			try {
+				if (section.IsSupported) {
+					var target = fileData.Slice(cursor, section.UncompressedSize);
+					stream.Position = section.Data.Offset;
+					if (section.Compression is Granny2CompressionType.None) {
+						stream.ReadExactly(target);
+					} else {
+						using var compressedPool = MemoryPool<byte>.Shared.Rent(section.Data.Count);
+						var compressed = compressedPool.Memory.Span[..section.Data.Count];
+						stream.ReadExactly(compressed);
+
+						switch (section.Compression) {
+							case Granny2CompressionType.Oodle0:
+							case Granny2CompressionType.Oodle1: {
+								GrannyOodleCompression.Decompress(compressed, target, section.CompressionBits1, section.CompressionBits2, section.UncompressedSize, header.ShouldConvertEndianness, section.Compression == Granny2CompressionType.Oodle1);
+								break;
+							}
+							default: throw new UnreachableException();
+						}
+					}
+				}
+			} finally {
+				cursor += section.UncompressedSize;
+			}
+		}
 	}
 
 	public Granny2Header Header { get; }

@@ -1,4 +1,5 @@
-﻿using Knit.Meta;
+﻿using System.Diagnostics;
+using Knit.Meta;
 
 namespace Knit.Diagnostics;
 
@@ -22,64 +23,68 @@ internal static class Program {
 
 	private static void ProcessFile(string file) {
 		Console.WriteLine($"{file}:");
+	#if !DEBUG
 		try {
-			using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+	#endif
+		using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 
-			using var granny = new Granny2File(stream);
+		using var granny = new Granny2File(stream);
 
-			Console.WriteLine("\tHeader:");
-			Console.WriteLine($"\t\tMagic: {granny.Header.Magic}");
-			Console.WriteLine($"\t\tVersion: {granny.Header.Version}");
-			Console.WriteLine($"\t\tSize: {granny.Header.HeaderSize}");
-			Console.WriteLine($"\t\tIs Supported: {granny.Header.IsSupported}");
-			Console.WriteLine($"\t\tIs 64-bit: {granny.Header.Is64Bit}");
-			Console.WriteLine($"\t\tIs Version 6: {granny.Header.IsV6}");
-			Console.WriteLine($"\t\tIs Version 7: {granny.Header.IsV7}");
-			Console.WriteLine($"\t\tIs Little-Endian: {granny.Header.IsLittleEndian}");
+		Console.WriteLine("\tHeader:");
+		Console.WriteLine($"\t\tMagic: {granny.Header.Magic}");
+		Console.WriteLine($"\t\tVersion: {granny.Header.Version}");
+		Console.WriteLine($"\t\tSize: {granny.Header.HeaderSize}");
+		Console.WriteLine($"\t\tIs Supported: {granny.Header.IsSupported}");
+		Console.WriteLine($"\t\tIs 64-bit: {granny.Header.Is64Bit}");
+		Console.WriteLine($"\t\tIs Version 6: {granny.Header.IsV6}");
+		Console.WriteLine($"\t\tIs Version 7: {granny.Header.IsV7}");
+		Console.WriteLine($"\t\tIs Little-Endian: {granny.Header.IsLittleEndian}");
 
-			Console.WriteLine("\tFileInfo:");
-			Console.WriteLine($"\t\tVersion: {granny.FileInfo.Version}");
-			Console.WriteLine($"\t\tSize: {granny.FileInfo.FileSize}");
-			Console.WriteLine($"\t\tIs Supported: {granny.FileInfo.IsSupported}");
-			Console.WriteLine($"\t\tChecksum: {granny.FileInfo.Checksum:x8}");
-			Console.WriteLine($"\t\tString Checksum: {granny.FileInfo.StringChecksum:x8}");
-			Console.WriteLine($"\t\tRoot Definition: {granny.FileInfo.RootTypeDefinition}");
-			Console.WriteLine($"\t\tRoot Object: {granny.FileInfo.Root}");
-			Console.WriteLine($"\t\tTag: {granny.FileInfo.Tag}");
-			Console.WriteLine($"\t\tExtra Tags: {granny.FileInfo.ExtraTags}");
+		Console.WriteLine("\tFileInfo:");
+		Console.WriteLine($"\t\tVersion: {granny.FileInfo.Version}");
+		Console.WriteLine($"\t\tSize: {granny.FileInfo.FileSize}");
+		Console.WriteLine($"\t\tIs Supported: {granny.FileInfo.IsSupported}");
+		Console.WriteLine($"\t\tChecksum: {granny.FileInfo.Checksum:x8}");
+		Console.WriteLine($"\t\tString Checksum: {granny.FileInfo.StringChecksum:x8}");
+		Console.WriteLine($"\t\tRoot Definition: {granny.FileInfo.RootTypeDefinition}");
+		Console.WriteLine($"\t\tRoot Object: {granny.FileInfo.Root}");
+		Console.WriteLine($"\t\tTag: {granny.FileInfo.Tag}");
+		Console.WriteLine($"\t\tExtra Tags: {granny.FileInfo.ExtraTags}");
 
-			Console.WriteLine("\tSections:");
-			var sections = granny.Sections.Span;
-			var unsupportedCompressions = new HashSet<Granny2CompressionType>();
-			for (var i = 0; i < sections.Length; ++i) {
-				var section = sections[i];
-				Console.Write($"\t\t{(Granny2SectionId) i:G}:");
-				if (section.IsEmpty) {
-					Console.WriteLine(" empty");
-					continue;
-				}
-
-				Console.WriteLine();
-				Console.WriteLine($"\t\t\tCompression: {section.Compression}");
-				Console.WriteLine($"\t\t\tCompression Bits 1: {section.CompressionBits1:b32} ({section.CompressionBits1})");
-				Console.WriteLine($"\t\t\tCompression Bits 2: {section.CompressionBits2:b32} ({section.CompressionBits2})");
-				Console.WriteLine($"\t\t\tAlignment: {section.Alignment}");
-				Console.WriteLine($"\t\t\tSize: {section.UncompressedSize}");
-				Console.WriteLine($"\t\t\tData Pointer: {section.Data}");
-				Console.WriteLine($"\t\t\tFixup Pointer: {section.Fixup}");
-				Console.WriteLine($"\t\t\tMarshalled Fixup Pointer: {section.MarshalledFixup}");
-				if (!section.IsSupported) {
-					unsupportedCompressions.Add(section.Compression);
-				}
-			}
-
-			if (unsupportedCompressions.Count > 0) {
-				Console.Error.WriteLine($"File {file} has an unsupported compression! {string.Join(", ", unsupportedCompressions)}");
+		Console.WriteLine("\tSections:");
+		var sections = granny.Sections.Span;
+		var unsupportedCompressions = new HashSet<Granny2CompressionType>();
+		for (var i = 0; i < sections.Length; ++i) {
+			var section = sections[i];
+			Console.Write($"\t\t{(Granny2SectionId) i:G}:");
+			if (section.IsEmpty) {
+				Console.WriteLine(" empty");
+				continue;
 			}
 
 			Console.WriteLine();
+			Console.WriteLine($"\t\t\tCompression: {section.Compression}");
+			Console.WriteLine($"\t\t\tCompression Bits 1: {section.CompressionBits1:b32} ({section.CompressionBits1})");
+			Console.WriteLine($"\t\t\tCompression Bits 2: {section.CompressionBits2:b32} ({section.CompressionBits2})");
+			Console.WriteLine($"\t\t\tAlignment: {section.Alignment}");
+			Console.WriteLine($"\t\t\tSize: {section.UncompressedSize}");
+			Console.WriteLine($"\t\t\tData Pointer: {section.Data}");
+			Console.WriteLine($"\t\t\tFixup Pointer: {section.Fixup}");
+			Console.WriteLine($"\t\t\tMarshalled Fixup Pointer: {section.MarshalledFixup}");
+			if (!section.IsSupported) {
+				unsupportedCompressions.Add(section.Compression);
+			}
+		}
+
+		if (unsupportedCompressions.Count > 0) {
+			Console.Error.WriteLine($"File {file} has an unsupported compression! {string.Join(", ", unsupportedCompressions)}");
+		}
+
+		Console.WriteLine();
+	#if !DEBUG
 		} catch (Exception e) {
 			Console.WriteLine($"\tFailed to read file: {e.Message}");
 		}
+	#endif
 	}
 }

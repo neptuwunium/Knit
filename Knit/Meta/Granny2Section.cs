@@ -8,11 +8,13 @@ public record struct Granny2Section {
 	public Granny2SectionPointer Data { get; set; }
 	public int UncompressedSize { get; set; }
 	public uint Alignment { get; set; }
-	public uint CompressionBits1 { get; set; }
-	public uint CompressionBits2 { get; set; }
+	public int CompressionBits1 { get; set; }
+	public int CompressionBits2 { get; set; }
 	public Granny2SectionPointer Fixup { get; set; }
 	public Granny2SectionPointer MarshalledFixup { get; set; }
 
 	public bool IsEmpty => UncompressedSize == 0;
-	public bool IsSupported => Compression is Granny2CompressionType.None; // need to implement Oodle1 and BitKnit1
+
+	public bool IsSupported => Compression is Granny2CompressionType.None or
+	                                          Granny2CompressionType.Oodle0 or Granny2CompressionType.Oodle1; // need to implement BitKnit
 }
