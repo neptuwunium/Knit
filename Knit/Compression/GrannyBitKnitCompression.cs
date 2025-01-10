@@ -13,6 +13,15 @@ using System.Runtime.InteropServices;
 namespace Knit.Compression;
 
 public static partial class GrannyBitKnitCompression {
+	public static int Decompress(Span<byte> compressed, Span<byte> decompress) {
+		using var state = new Bitknit2State(decompress);
+		if (!state.Decode(MemoryMarshal.Cast<byte, ushort>(compressed))) {
+			return -1;
+		}
+
+		return decompress.Length;
+	}
+
 	private sealed class FrequencyTable : IDisposable {
 		public FrequencyTable(int frequencyBits, int vocabSize, int lookupBits) {
 			Trace.Assert(frequencyBits is > 0 and < 16);
@@ -35,6 +44,11 @@ public static partial class GrannyBitKnitCompression {
 		public ushort[] Sums { get; }
 		private ushort[] Lookup { get; }
 
+		public void Dispose() {
+			ArrayPool<ushort>.Shared.Return(Sums);
+			ArrayPool<ushort>.Shared.Return(Lookup);
+		}
+
 		public uint FindSymbol(int code) {
 			var sym = Lookup[code >> LookupShift];
 			while (code >= Sums[sym + 1]) {
@@ -48,7 +62,7 @@ public static partial class GrannyBitKnitCompression {
 			var code = 0;
 			var sym = 0;
 			var next = Sums[1];
-			while (code < (1 << FrequencyBits)) {
+			while (code < 1 << FrequencyBits) {
 				if (code < next) {
 					Lookup[code >> LookupShift] = (ushort) sym;
 					code += 1 << LookupShift;
@@ -61,26 +75,11 @@ public static partial class GrannyBitKnitCompression {
 
 		public ushort Frequency(ushort sym) => (ushort) (Sums[sym + 1] - Sums[sym]);
 		public ushort SumBelow(ushort sym) => Sums[sym];
-
-		public void Dispose() {
-			ArrayPool<ushort>.Shared.Return(Sums);
-			ArrayPool<ushort>.Shared.Return(Lookup);
-		}
 	}
 
 	private ref struct BoundedStack(Span<ushort> data, int index) {
 		public Span<ushort> Stream { get; } = data;
 		public int Index { get; private set; } = index;
-
-		/*
-		public void Push(ushort word) {
-			if (Index <= 0) {
-				throw new InvalidOperationException("Stack underflow");
-			}
-
-			Stream[--Index] = word;
-		}
-		*/
 
 		public ushort Pop() {
 			if (Index >= Stream.Length) {
@@ -142,6 +141,11 @@ public static partial class GrannyBitKnitCompression {
 		private ushort[] FrequencyAccumulator { get; }
 		private int AdaptationCounter { get; set; }
 
+		public void Dispose() {
+			CDF.Dispose();
+			ArrayPool<ushort>.Shared.Return(FrequencyAccumulator);
+		}
+
 		public void ObserveSymbol(ushort symbol) {
 			FrequencyAccumulator[symbol] += FrequencyIncr;
 			AdaptationCounter = (AdaptationCounter + 1) % AdaptationInterval;
@@ -157,11 +161,6 @@ public static partial class GrannyBitKnitCompression {
 				CDF.FinishUpdate();
 			}
 		}
-
-		public void Dispose() {
-			CDF.Dispose();
-			ArrayPool<ushort>.Shared.Return(FrequencyAccumulator);
-		}
 	}
 
 	private sealed class RANSState {
@@ -171,38 +170,11 @@ public static partial class GrannyBitKnitCompression {
 			Bits = RefillThreshold;
 		}
 
-		public RANSState(uint bits) : this() {
-			Bits = bits;
-		}
+		public RANSState(uint bits) : this() => Bits = bits;
 
 		private int RefillShift { get; }
 		private uint RefillThreshold { get; }
 		public uint Bits { get; set; }
-
-		/*
-		public void PushBits(ref BoundedStack stream, uint sym, int nbits) {
-			var mask = ~(0xFFFFFFFFU >> nbits);
-			if ((Bits & mask) != 0) {
-				Offload(ref stream);
-			}
-
-			Bits = (Bits << nbits) | (sym & ((1u << nbits) - 1));
-		}
-		public void PushCDF(ref BoundedStack stream, uint sym, FrequencyTable cdf) {
-			var mask = ~(0xFFFFFFFFU >> cdf.FrequencyBits);
-			var freq = cdf.Frequency((ushort) sym); // note: suspicious cast
-			if (((Bits / freq) & mask) != 0) {
-				Offload(ref stream);
-			}
-
-			Bits = ((Bits / freq) << cdf.FrequencyBits) + Bits % freq + cdf.SumBelow((ushort) sym);
-		}
-
-		public void Offload(ref BoundedStack stream) {
-			stream.Push((ushort) (Bits & (RefillThreshold - 1)));
-			Bits >>= RefillShift;
-		}
-		*/
 
 		public uint PopBits(ref BoundedStack stream, int nbits) {
 			Trace.Assert(nbits < RefillShift);
@@ -248,13 +220,6 @@ public static partial class GrannyBitKnitCompression {
 			Entries[EntryOrder >> 28] = Entries[(EntryOrder >> 24) & 15];
 			Entries[(EntryOrder >> 24) & 15] = value;
 		}
-
-		/*
-		public uint Entry(int index) {
-			var slot = (EntryOrder >> (index * 4)) & 15;
-			return Entries[slot];
-		}
-		*/
 
 		public uint Hit(int index) {
 			var slot = (EntryOrder >> (index * 4)) & 15;
@@ -393,20 +358,20 @@ public static partial class GrannyBitKnitCompression {
 			CopyOffsetCache.Dispose();
 		}
 
-		private uint PopBits(ref BoundedStack src, int nbits, ref RANSState state1, ref RANSState state2) {
+		private static uint PopBits(ref BoundedStack src, int nbits, ref RANSState state1, ref RANSState state2) {
 			var result = state1.PopBits(ref src, nbits);
 			(state1, state2) = (state2, state1);
 			return result;
 		}
 
-		private uint PopModel(ref BoundedStack src, DeferredAdaptiveModel model, ref RANSState state1, ref RANSState state2) {
+		private static uint PopModel(ref BoundedStack src, DeferredAdaptiveModel model, ref RANSState state1, ref RANSState state2) {
 			var result = state1.PopCDF(ref src, model.CDF);
 			model.ObserveSymbol((ushort) result); // note: suspicious cast
 			(state1, state2) = (state2, state1);
 			return result;
 		}
 
-		private void DecodeInitialState(ref BoundedStack src, ref RANSState state1, ref RANSState state2) {
+		private static void DecodeInitialState(ref BoundedStack src, ref RANSState state1, ref RANSState state2) {
 			var init_0 = src.Pop();
 			var init_1 = src.Pop();
 			var merged = new RANSState(((uint) init_0 << 16) | init_1);
@@ -418,14 +383,5 @@ public static partial class GrannyBitKnitCompression {
 			state2.Bits &= (1u << (16 + split)) - 1;
 			state2.Bits |= 1u << (16 + split);
 		}
-	}
-
-	public static int Decompress(Span<byte> compressed, Span<byte> decompress) {
-		using var state = new Bitknit2State(decompress);
-		if (!state.Decode(MemoryMarshal.Cast<byte, ushort>(compressed))) {
-			return -1;
-		}
-
-		return decompress.Length;
 	}
 }

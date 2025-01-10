@@ -26,7 +26,7 @@ internal static class Program {
 
 	private static void ProcessFile(string file) {
 		Console.WriteLine($"{file}:");
-		
+
 		using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 		using var granny = new Granny2File(stream);
 
