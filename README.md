@@ -6,7 +6,17 @@ SPDX-License-Identifier: EUPL-1.2
 
 # Knit
 
-A (mostly) managed processor for Gr2 files.
+A managed C# reader and decompressor for Gr2 files.
+
+Due to Granny's extensible nature, it's better to find a specialized parser for a given game.
+
+⚠️ This library will never support serializing new structures into granny files.
+
+⚠️ Big Endian files, while supported are completely untested.
+
+⚠️ Oodle0 and BitKnit1 compression codecs are supported in theory but untested.
+
+⚠️ The Bink0 and Bink1 Texture Codecs are not supported, but planned.
 
 ## Attribution
 
