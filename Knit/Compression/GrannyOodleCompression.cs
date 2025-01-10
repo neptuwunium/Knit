@@ -1,6 +1,8 @@
+// SPDX-FileCopyrightText: 2025 Legiayayana (Knit, EUPL-1.2), 2022 arves100 (opengr2, MPL-2.0)
+//
 // SPDX-License-Identifier: EUPL-1.2
 // SPDX-License-Identifier: MPL-2.0
-// SPDX-Copyright: Legiayayana (Knit, EUPL-1.2), arves100 (opengr2, MPL-2.0), arbos (nwn2mdk, Boost)
+//
 // Oodle1 compression code is derived from:
 //	https://github.com/Arbos/nwn2mdk/blob/2e11e0d2a765d0e60f974f31846efdd220fd48ef/nwn2mdk-lib/gr2_decompress.cpp
 //	https://github.com/arves100/opengr2/blob/e50487abd1b1618211c5e64eab57da4632ffa9f2/libopengrn/oodle1.c

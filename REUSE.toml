@@ -1,0 +1,5 @@
+version = 1
+SPDX-PackageName = "Knit"
+SPDX-PackageSupplier = "Legiayayana <ada@chronovore.dev>"
+SPDX-PackageDownloadLocation = "https://github.com/yretenai/knit"
+annotations = []
