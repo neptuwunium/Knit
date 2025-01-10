@@ -1,6 +1,6 @@
 // SPDX-FileCopyrightText: 2025 Legiayayana
 //
-// SPDX-License-Identifier: EUPL-1.2
+// SPDX-License-Identifier: MPL-2.0
 
 namespace Knit.Compression;
 

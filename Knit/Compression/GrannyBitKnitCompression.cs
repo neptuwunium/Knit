@@ -1,6 +1,5 @@
 // SPDX-FileCopyrightText: 2025 Legiayayana (Knit, EUPL-1.2), 2024 eiz (pybg3, MIT)
 //
-// SPDX-License-Identifier: EUPL-1.2
 // SPDX-License-Identifier: MIT
 //
 // BitKnit compression code is derived from:

@@ -1,6 +1,5 @@
 // SPDX-FileCopyrightText: 2025 Legiayayana (Knit, EUPL-1.2), 2022 arves100 (opengr2, MPL-2.0)
 //
-// SPDX-License-Identifier: EUPL-1.2
 // SPDX-License-Identifier: MPL-2.0
 //
 // Oodle1 compression code is derived from:
