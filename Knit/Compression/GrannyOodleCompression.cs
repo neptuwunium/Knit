@@ -14,30 +14,7 @@ using System.Runtime.InteropServices;
 namespace Knit.Compression;
 
 public static partial class GrannyOodleCompression {
-	public static bool AllowUnmanagedDecompression { get; set; } = false;
-
 	public static int Decompress(Span<byte> compressed, Span<byte> decompress, int stop1, int stop2, int stop3, bool reverseEndianness, bool isOodle1) {
-		if (AllowUnmanagedDecompression &&
-		    ((OperatingSystem.IsLinux() && File.Exists("libopengrn.so")) ||
-		     (OperatingSystem.IsWindows() && File.Exists("libopengrn.dll")) ||
-		     (OperatingSystem.IsMacOS() && File.Exists("libopengrn.dylib")))) {
-			unsafe {
-				fixed (void* compressedPtr = compressed) {
-					fixed (void* decompressedPtr = decompress) {
-						if (!NativeMethods.Compression_UnOodle1((nint) compressedPtr, compressed.Length, (nint) decompressedPtr, decompress.Length, stop1, stop2, reverseEndianness, !isOodle1)) {
-							return -1;
-						}
-
-						return decompress.Length;
-					}
-				}
-			}
-		}
-
-		return DecompressManaged(compressed, decompress, stop1, stop2, stop3, reverseEndianness, isOodle1);
-	}
-
-	public static int DecompressManaged(Span<byte> compressed, Span<byte> decompress, int stop1, int stop2, int stop3, bool reverseEndianness, bool isOodle1) {
 		var fragSize = Unsafe.SizeOf<OodleFragmentHeader>() * 3;
 		if (reverseEndianness) {
 			if (isOodle1) {
@@ -71,12 +48,6 @@ public static partial class GrannyOodleCompression {
 		}
 
 		return cursor;
-	}
-
-	private static partial class NativeMethods {
-		[LibraryImport("libopengrn"), DefaultDllImportSearchPaths(DllImportSearchPath.SafeDirectories)]
-		[return: MarshalAs(UnmanagedType.I4)]
-		public static partial bool Compression_UnOodle1(nint compressedData, int compressedLength, nint decompressedData, int decompressedLength, int oodleStop1, int oodleStop2, [MarshalAs(UnmanagedType.I4)] bool endianessMismatch, [MarshalAs(UnmanagedType.I4)] bool isOodle0);
 	}
 
 	[InlineArray(4)]

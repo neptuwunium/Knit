@@ -79,6 +79,13 @@ public sealed class Granny2File : IDisposable {
 								GrannyOodleCompression.Decompress(compressed, target, section.CompressionBits1, section.CompressionBits2, section.UncompressedSize, header.ShouldConvertEndianness, section.Compression == Granny2CompressionType.Oodle1);
 								break;
 							}
+
+							case Granny2CompressionType.BitKnit1:
+							case Granny2CompressionType.BitKnit2: {
+								GrannyBitKnitCompression.Decompress(compressed, target);
+								File.WriteAllBytes("test.bin", target);
+								break;
+							}
 							default: throw new UnreachableException();
 						}
 					}
