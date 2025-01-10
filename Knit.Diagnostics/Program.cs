@@ -26,11 +26,8 @@ internal static class Program {
 
 	private static void ProcessFile(string file) {
 		Console.WriteLine($"{file}:");
-	#if !DEBUG
-		try {
-	#endif
+		
 		using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-
 		using var granny = new Granny2File(stream);
 
 		Console.WriteLine("\tHeader:");
@@ -84,10 +81,5 @@ internal static class Program {
 		}
 
 		Console.WriteLine();
-	#if !DEBUG
-		} catch (Exception e) {
-			Console.WriteLine($"\tFailed to read file: {e.Message}");
-		}
-	#endif
 	}
 }

@@ -100,4 +100,46 @@ public sealed class Granny2File : IDisposable {
 		HeaderData.Dispose();
 		FileData.Dispose();
 	}
+
+	public void Save(Stream stream) {
+		var oldSections = Sections.Span;
+		Span<Granny2Section> newSections = stackalloc Granny2Section[oldSections.Length];
+		var cursor = Header.HeaderSize;
+		for (var i = 0; i < oldSections.Length; ++i) {
+			if (!oldSections[i].IsSupported) {
+				throw new NotSupportedException("Compression type is not supported.");
+			}
+
+			newSections[i] = oldSections[i] with {
+				Compression = Granny2CompressionType.None,
+				CompressionBits1 = 0,
+				CompressionBits2 = 0,
+				Data = new Granny2SectionPointer {
+					Offset = cursor,
+					Count = oldSections[i].Data.Count,
+				},
+			};
+			cursor += newSections[i].Data.Count;
+		}
+
+		var newMagic = Header.IsV6 ? Granny2Header.Granny32_6_LE : Header.Is64Bit ? Granny2Header.Granny64_7_LE : Granny2Header.Granny32_7_LE;
+		var header = Header with {
+			Magic = newMagic,
+		};
+		stream.Write(header.AsBytes());
+
+		var data = FileData.Memory.Span;
+
+		var hash = Checksum.Hash(newSections.AsBytes());
+		hash = Checksum.Hash(data, hash);
+
+		var fileInfo = FileInfo with {
+			FileSize = cursor,
+			Checksum = ~hash,
+		};
+
+		stream.Write(fileInfo.AsBytes());
+		stream.Write(newSections.AsBytes());
+		stream.Write(data);
+	}
 }

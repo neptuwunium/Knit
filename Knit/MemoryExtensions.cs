@@ -33,7 +33,6 @@ internal static class MemoryExtensions {
 		return maxIndex;
 	}
 
-
 	public static int UpperBound<T>(this Span<T> list, T value) where T : IComparable<T> {
 		int low = 0, high = list.Length;
 
@@ -85,4 +84,8 @@ internal static class MemoryExtensions {
 			ints[i] = BinaryPrimitives.ReverseEndianness(ints[i]);
 		}
 	}
+
+	public static Span<byte> AsBytes<T>(this ref T value) where T : struct => MemoryMarshal.AsBytes(new Span<T>(ref value));
+	public static ReadOnlySpan<byte> AsBytes<T>(this ReadOnlySpan<T> data) where T : struct => MemoryMarshal.AsBytes(data);
+	public static Span<byte> AsBytes<T>(this Span<T> data) where T : struct => MemoryMarshal.AsBytes(data);
 }

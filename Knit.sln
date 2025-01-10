@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Knit", "Knit\Knit.csproj", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Knit.Diagnostics", "Knit.Diagnostics\Knit.Diagnostics.csproj", "{C670A85C-3146-4161-BA56-564A073A473E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Knit.Decompress", "Knit.Decompress\Knit.Decompress.csproj", "{11F250BB-5AB6-4295-A2C9-072216C72AB1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{C670A85C-3146-4161-BA56-564A073A473E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C670A85C-3146-4161-BA56-564A073A473E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C670A85C-3146-4161-BA56-564A073A473E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11F250BB-5AB6-4295-A2C9-072216C72AB1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11F250BB-5AB6-4295-A2C9-072216C72AB1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11F250BB-5AB6-4295-A2C9-072216C72AB1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11F250BB-5AB6-4295-A2C9-072216C72AB1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
