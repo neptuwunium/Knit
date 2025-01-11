@@ -14,7 +14,7 @@ Due to Granny's extensible nature, it's better to find a specialized parser for 
 
 ⚠️ Big Endian files, while supported are completely untested.
 
-⚠️ Oodle0 and BitKnit1 compression codecs are supported in theory but untested.
+⚠️ BitKnit1 compression codecs are supported in theory but untested.
 
 ⚠️ The Bink0 and Bink1 Texture Codecs are not supported, but planned.
 

@@ -83,7 +83,6 @@ public sealed class Granny2File : IDisposable {
 							case Granny2CompressionType.BitKnit1:
 							case Granny2CompressionType.BitKnit2: {
 								GrannyBitKnitCompression.Decompress(compressed, target);
-								File.WriteAllBytes("test.bin", target);
 								break;
 							}
 							default: throw new UnreachableException();

@@ -20,6 +20,6 @@ public record struct Granny2Section {
 	public bool IsEmpty => UncompressedSize == 0;
 
 	public bool IsSupported => Compression is Granny2CompressionType.None or
-	                                          Granny2CompressionType.Oodle0 or Granny2CompressionType.Oodle1 or
+	                                          Granny2CompressionType.Oodle1 or
 	                                          Granny2CompressionType.BitKnit1 or Granny2CompressionType.BitKnit2;
 }

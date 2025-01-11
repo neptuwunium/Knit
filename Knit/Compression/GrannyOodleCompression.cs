@@ -69,7 +69,7 @@ public static partial class GrannyOodleCompression {
 		public int DecodedValueMax => (int) (Value1 & 0x1FF);
 		public int BackrefValueMax => (int) (Value1 >> 9);
 		public int DecodedCount => (int) (Value2 & 0x1FF);
-		public int HighBitCount => (int) (Value2 >> 19);
+		public int HighBitCount => (int) (Value2 >> 19); // todo: .dll does >> 9, investigate rebuild functions since that seems to be where it dies.
 	}
 
 	private ref struct OodleContext {
@@ -282,7 +282,7 @@ public static partial class GrannyOodleCompression {
 			HighBitWindow = new OodleWindow(HighBitValueMax - 1, fragment.HighBitCount + 1);
 
 			MidBitWindows = ArrayPool<OodleWindow>.Shared.Rent(HighBitValueMax);
-			for (var i = 0; i < MidBitWindows.Length; ++i) {
+			for (var i = 0; i < HighBitValueMax; ++i) {
 				MidBitWindows[i] = new OodleWindow(MidBitValueMax - 1, MidBitValueMax);
 			}
 
