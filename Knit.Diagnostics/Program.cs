@@ -76,8 +76,6 @@ internal static class Program {
 			}
 		}
 
-		File.WriteAllBytes("test.bin", granny.FileData.Memory.Span);
-
 		if (unsupportedCompressions.Count > 0) {
 			Console.Error.WriteLine($"File {file} has an unsupported compression! {string.Join(", ", unsupportedCompressions)}");
 		} else {

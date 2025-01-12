@@ -104,15 +104,16 @@ public sealed class Granny2File : IDisposable {
 				continue;
 			}
 
-			// for some reason if we apply marshalling after fixups, it dies.
-			stream.Position = section.MarshalledFixup.Offset;
-			using var marshalledFixups = MemoryPool<Granny2MarshalledFixup>.Shared.Rent(section.MarshalledFixup.Count);
-			var marshalledFixupsSpan = marshalledFixups.Memory.Span[..section.MarshalledFixup.Count];
-			stream.ReadExactly(marshalledFixupsSpan.AsBytes());
-			foreach (var marshal in marshalledFixupsSpan) {
-				var objectLocation = new SpanPointer(fileData, Dereference((Granny2SectionId) index, marshal.ObjectOffset));
-				var typeLocation = new SpanPointer(fileData, Dereference(marshal.TypeLocation));
-				ApplyMarshal(objectLocation, marshal.Count, typeLocation);
+			if (header.ShouldConvertEndianness) {
+				stream.Position = section.MarshalledFixup.Offset;
+				using var marshalledFixups = MemoryPool<Granny2MarshalledFixup>.Shared.Rent(section.MarshalledFixup.Count);
+				var marshalledFixupsSpan = marshalledFixups.Memory.Span[..section.MarshalledFixup.Count];
+				stream.ReadExactly(marshalledFixupsSpan.AsBytes());
+				foreach (var marshal in marshalledFixupsSpan) {
+					var objectLocation = new SpanPointer(fileData, Dereference((Granny2SectionId) index, marshal.ObjectOffset));
+					var typeLocation = new SpanPointer(fileData, Dereference(marshal.TypeLocation));
+					ApplyMarshal(objectLocation, marshal.Count, typeLocation);
+				}
 			}
 
 			stream.Position = section.Fixup.Offset;
