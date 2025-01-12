@@ -4,6 +4,7 @@
 
 using System.Buffers;
 using System.Diagnostics;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Knit.Compression;
@@ -38,6 +39,7 @@ public sealed class Granny2File : IDisposable {
 
 		FileInfo = MemoryMarshal.Read<Granny2FileInfo>(headerDataSpan[Unsafe.SizeOf<Granny2Header>()..]);
 		Sections = HeaderData.Memory[(Unsafe.SizeOf<Granny2Header>() + FileInfo.Sections.Offset)..].Cast<Granny2Section>()[..FileInfo.Sections.Count];
+		SectionBaseAddress = ArrayPool<int>.Shared.Rent(FileInfo.Sections.Count);
 
 		if (!FileInfo.IsSupported) {
 			HeaderData.Dispose();
@@ -50,7 +52,9 @@ public sealed class Granny2File : IDisposable {
 		}
 
 		var totalSize = 0;
-		foreach (var section in Sections.Span) {
+		for (var index = 0; index < Sections.Span.Length; index++) {
+			SectionBaseAddress[index] = totalSize;
+			var section = Sections.Span[index];
 			totalSize += section.UncompressedSize;
 		}
 
@@ -93,59 +97,126 @@ public sealed class Granny2File : IDisposable {
 				cursor += section.UncompressedSize;
 			}
 		}
+
+		for (var index = 0; index < Sections.Span.Length; index++) {
+			var section = Sections.Span[index];
+			if (section.IsEmpty) {
+				continue;
+			}
+
+			// for some reason if we apply marshalling after fixups, it dies.
+			stream.Position = section.MarshalledFixup.Offset;
+			using var marshalledFixups = MemoryPool<Granny2MarshalledFixup>.Shared.Rent(section.MarshalledFixup.Count);
+			var marshalledFixupsSpan = marshalledFixups.Memory.Span[..section.MarshalledFixup.Count];
+			stream.ReadExactly(marshalledFixupsSpan.AsBytes());
+			foreach (var marshal in marshalledFixupsSpan) {
+				var objectLocation = new SpanPointer(fileData, Dereference((Granny2SectionId) index, marshal.ObjectOffset));
+				var typeLocation = new SpanPointer(fileData, Dereference(marshal.TypeLocation));
+				ApplyMarshal(objectLocation, marshal.Count, typeLocation);
+			}
+
+			stream.Position = section.Fixup.Offset;
+			using var fixups = MemoryPool<Granny2Fixup>.Shared.Rent(section.Fixup.Count);
+			var fixupsSpan = fixups.Memory.Span[..section.Fixup.Count];
+			stream.ReadExactly(fixupsSpan.AsBytes());
+			foreach (var fixup in fixupsSpan) {
+				MemoryMarshal.Write(Resolve(Dereference((Granny2SectionId) index, fixup.FromOffset)), Dereference(fixup.To));
+			}
+		}
 	}
 
 	public Granny2Header Header { get; }
 	public Granny2FileInfo FileInfo { get; }
 	public Memory<Granny2Section> Sections { get; }
+	public int[] SectionBaseAddress { get; }
 
-	private IMemoryOwner<byte> HeaderData { get; }
-	private IMemoryOwner<byte> FileData { get; }
+	public IMemoryOwner<byte> HeaderData { get; }
+	public IMemoryOwner<byte> FileData { get; }
 
 	public void Dispose() {
 		HeaderData.Dispose();
 		FileData.Dispose();
+		ArrayPool<int>.Shared.Return(SectionBaseAddress);
 	}
 
-	public void Save(Stream stream) {
-		var oldSections = Sections.Span;
-		Span<Granny2Section> newSections = stackalloc Granny2Section[oldSections.Length];
-		var cursor = Header.HeaderSize;
-		for (var i = 0; i < oldSections.Length; ++i) {
-			if (!oldSections[i].IsSupported) {
-				throw new NotSupportedException("Compression type is not supported.");
+	public void ApplyMarshal(SpanPointer objectLocation, int typeCount, SpanPointer typeLocation) {
+		if (Header.Is64Bit) {
+			ApplyMarshal<long>(objectLocation, typeCount, typeLocation);
+		} else {
+			ApplyMarshal<int>(objectLocation, typeCount, typeLocation);
+		}
+	}
+
+	public void ApplyMarshal<T>(SpanPointer objectLocation, int typeCount, SpanPointer typeLocation) where T : ISignedNumber<T> {
+		var typeInfos = MemoryMarshal.Cast<byte, Granny2TypeDefinition<T>>(typeLocation);
+		for (var index = 0; index < typeInfos.Length && typeCount > 0; index++) {
+			var typeInfo = typeInfos[index];
+			if (typeInfo.Type == Granny2MemberType.End) {
+				typeCount--;
+				continue;
 			}
 
-			newSections[i] = oldSections[i] with {
-				Compression = Granny2CompressionType.None,
-				CompressionBits1 = 0,
-				CompressionBits2 = 0,
-				Data = new Granny2SectionPointer {
-					Offset = cursor,
-					Count = oldSections[i].Data.Count,
-				},
-			};
-			cursor += newSections[i].Data.Count;
+			var size = typeInfo.GetArraySize(this);
+			if (typeInfo.Type == Granny2MemberType.Inline) {
+				ApplyMarshal<T>(objectLocation, 1, typeInfo.GetTypeDefinition(this));
+			} else {
+				var objBlock = objectLocation.Span[..size];
+				switch (typeInfo.Type) {
+					case Granny2MemberType.ReferenceToArray:
+					case Granny2MemberType.ArrayOfReferences:
+					case Granny2MemberType.ReferenceToVariantArray:
+					case Granny2MemberType.String:
+					case Granny2MemberType.Transform:
+					case Granny2MemberType.Real32:
+					case Granny2MemberType.Int32:
+					case Granny2MemberType.UInt32:
+						objBlock.Reverse32();
+						break;
+					case Granny2MemberType.Int16:
+					case Granny2MemberType.UInt16:
+					case Granny2MemberType.BinormalInt16:
+					case Granny2MemberType.NormalUInt16:
+					case Granny2MemberType.Real16:
+						objBlock.Reverse16();
+						break;
+				}
+			}
+
+			objectLocation += size;
 		}
-
-		var newMagic = Header.IsV6 ? Granny2Header.Granny32_6_LE : Header.Is64Bit ? Granny2Header.Granny64_7_LE : Granny2Header.Granny32_7_LE;
-		var header = Header with {
-			Magic = newMagic,
-		};
-		stream.Write(header.AsBytes());
-
-		var data = FileData.Memory.Span;
-
-		var hash = Checksum.Hash(newSections.AsBytes());
-		hash = Checksum.Hash(data, hash);
-
-		var fileInfo = FileInfo with {
-			FileSize = cursor,
-			Checksum = ~hash,
-		};
-
-		stream.Write(fileInfo.AsBytes());
-		stream.Write(newSections.AsBytes());
-		stream.Write(data);
 	}
+
+	public int CalculateTypeSize<T>(SpanPointer typeLocation) where T : ISignedNumber<T> {
+		var size = 0;
+		EnumerateTypeMembers(typeLocation, typeInfo => {
+			size += typeInfo.GetArraySize(this);
+			return true;
+		});
+		return size;
+	}
+
+	public void EnumerateTypeMembers(SpanPointer typeLocation, Func<IGranny2TypeDefinition, bool> callback) {
+		if (Header.Is64Bit) {
+			EnumerateTypeMembers<long>(typeLocation, callback);
+		} else {
+			EnumerateTypeMembers<int>(typeLocation, callback);
+		}
+	}
+
+	public static void EnumerateTypeMembers<T>(SpanPointer typeLocation, Func<IGranny2TypeDefinition, bool> callback) where T : ISignedNumber<T> {
+		var typeInfos = MemoryMarshal.Cast<byte, Granny2TypeDefinition<T>>(typeLocation);
+		do {
+			if (!callback(typeInfos[0])) {
+				return;
+			}
+
+			typeInfos = typeInfos[1..];
+		} while (typeInfos[0].Type != Granny2MemberType.End);
+	}
+
+	public int Dereference(Granny2Reference ptr) => Dereference(ptr.Section, ptr.Offset);
+	public int Dereference(Granny2SectionId section, int offset) => SectionBaseAddress[(int) section] + offset;
+	public SpanPointer Resolve(int address) => new(FileData.Memory.Span, address);
+	public SpanPointer Resolve(Granny2Reference ptr) => Resolve(Dereference(ptr));
+	public SpanPointer Resolve(Granny2SectionId section, int offset) => Resolve(Dereference(section, offset));
 }
