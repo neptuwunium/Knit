@@ -12,10 +12,10 @@ public record struct Granny2TypeDefinition<T> : IGranny2TypeDefinition where T :
 	public int ArraySize { get; set; }
 	public GrannyCustomTypeInfo CustomTypeInfo { get; set; }
 	public T TraversalId { get; set; }
-	int IGranny2TypeDefinition.NameOffset => int.CreateTruncating(NameOffset);
-	int IGranny2TypeDefinition.ChildrenOffset => int.CreateTruncating(ChildrenOffset);
+	int IGranny2TypeDefinition.NameOffset => int.CreateChecked(NameOffset);
+	int IGranny2TypeDefinition.ChildrenOffset => int.CreateChecked(ChildrenOffset);
 
-	public SpanPointer GetTypeDefinition(Granny2File gr) => gr.Resolve(int.CreateTruncating(ChildrenOffset));
+	public SpanPointer GetTypeDefinition(Granny2File gr) => gr.Resolve(int.CreateChecked(ChildrenOffset));
 
 	public int GetSize(Granny2File gr) {
 		return Type switch {
@@ -46,16 +46,10 @@ public record struct Granny2TypeDefinition<T> : IGranny2TypeDefinition where T :
 		       };
 	}
 
-	public int GetArraySize(Granny2File gr) {
-		if (Type == Granny2MemberType.Inline) {
-			return GetSize(gr);
-		}
-
-		return GetSize(gr) * ArraySize;
-	}
+	public int GetArraySize(Granny2File gr) => GetSize(gr) * Math.Max(1, ArraySize);
 
 	public string GetName(Granny2File gr) {
-		var offset = int.CreateTruncating(NameOffset);
+		var offset = int.CreateChecked(NameOffset);
 		if (offset == 0) {
 			return string.Empty;
 		}

@@ -29,4 +29,5 @@ public enum Granny2MemberType {
 	Real16 = 21,
 	EmptyReference = 22,
 	Bool = Int32,
+	Automatic = -1,
 }
