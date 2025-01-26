@@ -235,6 +235,7 @@ public sealed class Granny2File : IDisposable {
 		}
 
 		var instance = Activator.CreateInstance(type) as MarshalledGrannyType ?? throw new InvalidOperationException();
+		references[objectLocation] = instance;
 
 		var members = type.GetProperties(BindingFlags.SetProperty | BindingFlags.Public | BindingFlags.Instance)
 		                  .Where(x => x.GetCustomAttribute<GrannyMemberAttribute>() != null)
@@ -298,7 +299,6 @@ public sealed class Granny2File : IDisposable {
 
 			if (typeInfo.ChildrenOffset != T.Zero) {
 				var nested = LoadType<T>(propertyType, nestedObjectLocation, typeInfo.GetTypeDefinition(this), references);
-				references[nestedObjectLocation] = nested;
 				return nested;
 			}
 
@@ -325,11 +325,12 @@ public sealed class Granny2File : IDisposable {
 						return value;
 					}
 
+					references[nestedObjectLocation] = array;
+
 					var nestedSize = CalculateTypeSize<T>(typeInfo.GetTypeDefinition(this));
 					for (var index = 0; index < count; ++index) {
 						try {
 							var nested = LoadType<T>(propertyType, nestedObjectLocation, typeInfo.GetTypeDefinition(this), references);
-							references[nestedObjectLocation] = nested;
 							array.SetValue(nested, index);
 						} finally {
 							nestedObjectLocation += nestedSize;
@@ -352,6 +353,8 @@ public sealed class Granny2File : IDisposable {
 						return value;
 					}
 
+					references[nestedObjectLocation] = array;
+
 					var nestedSize = Unsafe.SizeOf<T>();
 					for (var index = 0; index < count; ++index) {
 						try {
@@ -362,7 +365,6 @@ public sealed class Granny2File : IDisposable {
 
 							var arrayLocation = Resolve(arrayOffset);
 							var nested = LoadType<T>(propertyType, arrayLocation, typeInfo.GetTypeDefinition(this), references);
-							references[arrayLocation] = nested;
 							array.SetValue(nested, index);
 						} finally {
 							nestedObjectLocation += nestedSize;
