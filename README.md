@@ -14,7 +14,7 @@ Due to Granny's extensible nature, it's better to find a specialized parser for 
 
 ⚠️ Big Endian files, while supported are completely untested.
 
-⚠️ BitKnit1 compression codecs are supported in theory but untested.
+⚠️ Oodle0 compression codec is not supported.
 
 ⚠️ The Bink0 and Bink1 Texture Codecs are not supported, but planned.
 
@@ -22,3 +22,4 @@ Due to Granny's extensible nature, it's better to find a specialized parser for 
 
 - [opengr2](https://github.com/arves100/opengr2) (MPL-2.0) - Oodle decompression
 - [pybg3](https://github.com/eiz/pybg3) (MIT) - BitKnit decompression
+- [LSLib](https://github.com/Norbyte/lslib) (MIT) - Reference for Animations

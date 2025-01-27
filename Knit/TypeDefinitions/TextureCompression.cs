@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: EUPL-1.2
 
-namespace Knit.Meta;
+namespace Knit.TypeDefinitions;
 
-public enum Granny2TextureCompression {
+public enum TextureCompression {
 	UserDefined = 0,
 	Raw = 1,
 	S3TC = 2,

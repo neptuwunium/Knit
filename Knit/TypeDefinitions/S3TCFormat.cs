@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: EUPL-1.2
 
-namespace Knit.Meta;
+namespace Knit.TypeDefinitions;
 
-public enum Granny2S3TCFormat {
+public enum S3TCFormat {
 	DXT1 = 0,
 	DXT1Alpha = 1,
 	DXT3 = 2,

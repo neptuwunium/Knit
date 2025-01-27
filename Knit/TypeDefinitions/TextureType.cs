@@ -2,9 +2,9 @@
 //
 // SPDX-License-Identifier: EUPL-1.2
 
-namespace Knit.Meta;
+namespace Knit.TypeDefinitions;
 
-public enum Granny2TextureType {
+public enum TextureType {
 	ColorMap = 0,
 	CubeMap = 1,
 }
