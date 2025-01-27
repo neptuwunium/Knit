@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace Knit.TypeDefinitions;
 
-[InlineArray(8)]
+[InlineArray(256)]
 public struct VertexBoneIndices : IEquatable<VertexBoneIndices> {
 	public int Value;
 

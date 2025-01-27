@@ -13,8 +13,9 @@ public interface IGranny2TypeDefinition {
 
 	public SpanPointer GetTypeDefinition(Granny2File gr);
 	public int GetSize(Granny2File gr);
-	public int GetArraySize(Granny2File gr);
+	public int GetTotalSize(Granny2File gr);
 	public string GetName(Granny2File gr);
+	IGranny2TypeDefinition Single();
 }
 
 public record Granny2TinyType(string Name, int ArraySize, Granny2MemberType MemberType);

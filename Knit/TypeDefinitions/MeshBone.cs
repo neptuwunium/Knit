@@ -8,7 +8,7 @@ namespace Knit.TypeDefinitions;
 
 public class MeshBone {
 	[GrannyMember("BoneName")] public string Name { get; set; } = "";
-	public Vector3 OOBMin { get; set; }
-	public Vector3 OOBMax { get; set; }
+	public Vector3 OBBMin { get; set; }
+	public Vector3 OBBMax { get; set; }
 	public int[] TriangleIndices { get; set; } = [];
 }

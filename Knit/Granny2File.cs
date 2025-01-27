@@ -138,6 +138,11 @@ public sealed class Granny2File : IDisposable {
 	public IMemoryOwner<byte> HeaderData { get; }
 	public IMemoryOwner<byte> FileData { get; }
 
+	public Func<string, Type?>? TypeResolver { get; set; }
+#if DEBUG
+	private HashSet<int> DebuggedTypes { get; } = [];
+#endif
+
 	public void Dispose() {
 		HeaderData.Dispose();
 		FileData.Dispose();
@@ -161,7 +166,7 @@ public sealed class Granny2File : IDisposable {
 				continue;
 			}
 
-			var size = typeInfo.GetArraySize(this);
+			var size = typeInfo.GetTotalSize(this);
 			if (typeInfo.Type == Granny2MemberType.Inline) {
 				ApplyMarshal<T>(objectLocation, 1, typeInfo.GetTypeDefinition(this));
 			} else {
@@ -194,7 +199,7 @@ public sealed class Granny2File : IDisposable {
 	public int CalculateTypeSize<T>(SpanPointer typeLocation) where T : ISignedNumber<T> {
 		var size = 0;
 		EnumerateTypeMembers(typeLocation, typeInfo => {
-			size += typeInfo.GetArraySize(this);
+			size += typeInfo.GetTotalSize(this);
 			return true;
 		});
 		return size;
@@ -221,7 +226,6 @@ public sealed class Granny2File : IDisposable {
 
 	public GrannyFileRoot? LoadRoot() => LoadRoot<GrannyFileRoot>();
 
-	// todo: create method to load into a hashmap.
 	public T? LoadRoot<T>() where T : class => LoadType<T>(Resolve(FileInfo.Root), Resolve(FileInfo.RootTypeDefinition));
 
 	public object? LoadRoot(Type type) => LoadType(type, Resolve(FileInfo.Root), Resolve(FileInfo.RootTypeDefinition));
@@ -233,6 +237,14 @@ public sealed class Granny2File : IDisposable {
 	public object? LoadType<T>(Type type, SpanPointer objectLocation, SpanPointer typeLocation, Dictionary<int, object?> references) where T : struct, ISignedNumber<T> {
 		if (references.TryGetValue(objectLocation, out var cached)) {
 			return cached;
+		}
+
+		if (type == typeof(object)) {
+			type = TryResolveCustomType<T>(objectLocation, typeLocation);
+		}
+
+		if (type == typeof(Dictionary<string, object?>)) {
+			return LoadTypeData<T>(objectLocation, typeLocation, []);
 		}
 
 		if (type.IsValueType || type.IsEnum || type.IsPrimitive) {
@@ -264,17 +276,26 @@ public sealed class Granny2File : IDisposable {
 		var instance = Activator.CreateInstance(type) ?? throw new InvalidOperationException();
 		references[objectLocation] = instance;
 
+		var shouldStub = type.GetCustomAttribute<GrannyStubMembersAttribute>() != null;
+		var tracker = new HashSet<string>();
+
 		var members = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
 		                  .Where(x => x.GetCustomAttribute<GrannyIgnoreMemberAttribute>() == null && x.SetMethod != null)
-		                  .ToDictionary(x => x.GetCustomAttribute<GrannyMemberAttribute>()?.Name ?? x.Name, x => x);
+		                  .ToDictionary(x => x.GetCustomAttribute<GrannyMemberAttribute>()?.Name ?? x.Name, x => x, StringComparer.OrdinalIgnoreCase);
 
 		var typeInfos = MemoryMarshal.Cast<byte, Granny2TypeDefinition<T>>(typeLocation);
 		do {
 			var typeInfo = typeInfos[0];
 
 			var name = typeInfo.GetName(this);
-			var size = typeInfo.GetArraySize(this);
+
+			var size = typeInfo.GetTotalSize(this);
+			var singleSize = typeInfo.GetSize(this);
 			try {
+				if (shouldStub && !tracker.Add(name)) {
+					continue;
+				}
+
 				if ((instance as IGrannyType)?.Visit(this, name, typeInfo, objectLocation) == true) {
 					continue;
 				}
@@ -284,7 +305,7 @@ public sealed class Granny2File : IDisposable {
 				}
 
 				var propertyType = member.PropertyType;
-				var value = ExtractValue(objectLocation, propertyType, typeInfo, size, references);
+				var value = ExtractValue(objectLocation, propertyType, typeInfo, singleSize, references);
 				if (value != null) {
 					member.SetValue(instance, value);
 				}
@@ -298,8 +319,200 @@ public sealed class Granny2File : IDisposable {
 		return instance;
 	}
 
+	private Type TryResolveCustomType<T>(SpanPointer objectLocation, SpanPointer typeLocation) where T : struct, ISignedNumber<T> {
+		var tmpType = MemoryMarshal.Cast<byte, Granny2TypeDefinition<T>>(typeLocation);
+		var tmpLoc = objectLocation;
+		do {
+			var typeInfo = tmpType[0];
+			var size = typeInfo.GetTotalSize(this);
+			try {
+				// todo: handle other cases?
+				if (typeInfo.Type == Granny2MemberType.String && typeInfo.GetName(this).Equals("TypeName", StringComparison.OrdinalIgnoreCase)) {
+					var name = ReadValue<T>(tmpLoc, typeInfo, []) as string;
+					if (!string.IsNullOrEmpty(name)) {
+						var newType = TypeResolver?.Invoke(name);
+						if (newType != null) {
+							return newType;
+						}
+
+					#if DEBUG
+						if (DebuggedTypes.Add(typeLocation.Offset)) {
+							Console.WriteLine($"Tried to resolve custom type {name} which was not handled.");
+							DebugType(typeLocation, "\t", []);
+						}
+					#endif
+
+						break;
+					}
+				}
+			} finally {
+				tmpLoc += size;
+
+				tmpType = tmpType[1..];
+			}
+		} while (tmpType[0].Type != Granny2MemberType.End);
+
+		return typeof(Dictionary<string, object?>);
+	}
+
+	public Dictionary<string, object?> LoadTypeData(SpanPointer objectLocation, SpanPointer typeLocation) => Header.Is64Bit ? LoadTypeData<long>(objectLocation, typeLocation, []) : LoadTypeData<int>(objectLocation, typeLocation, []);
+
+	public Dictionary<string, object?> LoadTypeData<T>(SpanPointer objectLocation, SpanPointer typeLocation, Dictionary<int, object?> references) where T : struct, ISignedNumber<T> {
+		var result = new Dictionary<string, object?>();
+		var typeInfos = MemoryMarshal.Cast<byte, Granny2TypeDefinition<T>>(typeLocation);
+		do {
+			var typeInfo = typeInfos[0];
+
+			var name = typeInfo.GetName(this);
+			var size = typeInfo.GetTotalSize(this);
+			try {
+				result[name] = ReadValue<T>(objectLocation, typeInfo, references);
+			} finally {
+				objectLocation += size;
+
+				typeInfos = typeInfos[1..];
+			}
+		} while (typeInfos[0].Type != Granny2MemberType.End);
+
+		return result;
+	}
+
+	public object? ReadValue(SpanPointer objectLocation, IGranny2TypeDefinition typeInfo, Dictionary<int, object?> references) => Header.Is64Bit ? ReadValue<long>(objectLocation, typeInfo, references) : ReadValue<int>(objectLocation, typeInfo, references);
+
+	public object? ReadValue<T>(SpanPointer objectLocation, IGranny2TypeDefinition typeInfo, Dictionary<int, object?> references) where T : struct, ISignedNumber<T> {
+		if (typeInfo.ArraySize > 1) {
+			var result = new object?[typeInfo.ArraySize];
+			var size = typeInfo.GetSize(this);
+			var nestedTypeInfo = typeInfo.Single();
+
+			for (var index = 0; index < typeInfo.ArraySize; ++index) {
+				try {
+					result[index] = ReadValue<T>(objectLocation, nestedTypeInfo, references);
+				} finally {
+					objectLocation += size;
+				}
+			}
+
+			return result;
+		}
+
+		switch (typeInfo.Type) {
+			case Granny2MemberType.Inline: {
+				return LoadTypeData<T>(objectLocation, typeInfo.GetTypeDefinition(this), references);
+			}
+			case Granny2MemberType.Reference:
+			case Granny2MemberType.VariantReference: {
+				var offset = int.CreateChecked(MemoryMarshal.Read<T>(objectLocation));
+
+				SpanPointer nestedTypeAddress;
+				if (typeInfo.Type == Granny2MemberType.VariantReference) {
+					var typePtr = int.CreateChecked(MemoryMarshal.Read<T>(objectLocation + int.CreateChecked(Unsafe.SizeOf<T>())));
+					(offset, typePtr) = (typePtr, offset);
+					if (typePtr == 0) {
+						return null;
+					}
+
+					nestedTypeAddress = Resolve(typePtr);
+				} else {
+					nestedTypeAddress = typeInfo.GetTypeDefinition(this);
+				}
+
+				if (offset == 0) {
+					return null;
+				}
+
+				var nestedObjectLocation = Resolve(offset);
+				return LoadTypeData<T>(nestedObjectLocation, nestedTypeAddress, references);
+			}
+			case Granny2MemberType.ReferenceToArray:
+			case Granny2MemberType.ReferenceToVariantArray: {
+				var nestedType = typeInfo.GetTypeDefinition(this);
+				if (typeInfo.Type == Granny2MemberType.ReferenceToVariantArray) {
+					var typePtr = int.CreateChecked(MemoryMarshal.Read<T>(objectLocation));
+					if (typePtr == 0) {
+						return null;
+					}
+
+					nestedType = Resolve(typePtr);
+					objectLocation += Unsafe.SizeOf<T>();
+				}
+
+				var count = MemoryMarshal.Read<int>(objectLocation);
+				var offset = int.CreateChecked(MemoryMarshal.Read<T>(objectLocation + 4));
+				if (offset == 0 || count == 0) {
+					return null;
+				}
+
+				var result = new object?[count];
+				var nestedObjectLocation = Resolve(offset);
+				var nestedSize = CalculateTypeSize<T>(nestedType);
+				for (var index = 0; index < count; ++index) {
+					try {
+						result[index] = LoadTypeData<T>(nestedObjectLocation, nestedType, references);
+					} finally {
+						nestedObjectLocation += nestedSize;
+					}
+				}
+
+				return result;
+			}
+			case Granny2MemberType.ArrayOfReferences: {
+				var count = MemoryMarshal.Read<int>(objectLocation);
+				var offset = int.CreateChecked(MemoryMarshal.Read<T>(objectLocation + 4));
+				if (offset == 0 || count == 0) {
+					return null;
+				}
+
+				var nestedObjectLocation = Resolve(offset);
+				var nestedSize = Unsafe.SizeOf<T>();
+				var result = new object?[typeInfo.ArraySize];
+				for (var index = 0; index < count; ++index) {
+					try {
+						var arrayOffset = int.CreateChecked(MemoryMarshal.Read<T>(nestedObjectLocation));
+						if (arrayOffset == 0) {
+							continue;
+						}
+
+						var arrayLocation = Resolve(arrayOffset);
+						result[index] = LoadTypeData<T>(arrayLocation, typeInfo.GetTypeDefinition(this), references);
+					} finally {
+						nestedObjectLocation += nestedSize;
+					}
+				}
+
+				return result;
+			}
+			case Granny2MemberType.SwitchableType: throw new NotSupportedException();
+			case Granny2MemberType.String: {
+				var offset = int.CreateChecked(MemoryMarshal.Read<T>(objectLocation));
+				if (offset == 0) {
+					return string.Empty;
+				}
+
+				var nestedOffset = Resolve(offset);
+				var end = nestedOffset.Span.IndexOf((byte) 0);
+				return Encoding.ASCII.GetString(nestedOffset.Span[..end]);
+			}
+			case Granny2MemberType.Transform: return MemoryMarshal.Read<XForm>(objectLocation);
+			case Granny2MemberType.Real32: return MemoryMarshal.Read<float>(objectLocation);
+			case Granny2MemberType.Int8: return MemoryMarshal.Read<sbyte>(objectLocation);
+			case Granny2MemberType.UInt8: return MemoryMarshal.Read<byte>(objectLocation);
+			case Granny2MemberType.BinormalInt8: return MemoryMarshal.Read<sbyte>(objectLocation) / sbyte.MaxValue;
+			case Granny2MemberType.NormalUInt8: return MemoryMarshal.Read<byte>(objectLocation) / uint.MaxValue;
+			case Granny2MemberType.Int16: return MemoryMarshal.Read<short>(objectLocation);
+			case Granny2MemberType.UInt16: return MemoryMarshal.Read<ushort>(objectLocation);
+			case Granny2MemberType.BinormalInt16: return MemoryMarshal.Read<short>(objectLocation) / short.MaxValue;
+			case Granny2MemberType.NormalUInt16: return MemoryMarshal.Read<ushort>(objectLocation) / ushort.MaxValue;
+			case Granny2MemberType.Int32: return MemoryMarshal.Read<int>(objectLocation);
+			case Granny2MemberType.UInt32: return MemoryMarshal.Read<uint>(objectLocation);
+			case Granny2MemberType.Real16: return MemoryMarshal.Read<Half>(objectLocation);
+			case Granny2MemberType.EmptyReference: return null;
+			default: throw new ArgumentOutOfRangeException();
+		}
+	}
+
 	// NOTE: we're not checking the type info type attribute, the chance of marshalling something as something else is not zero.
-	private object? ExtractValue<T>(SpanPointer objectLocation, Type propertyType, Granny2TypeDefinition<T> typeInfo, int size, Dictionary<int, object?> references) where T : struct, ISignedNumber<T> {
+	public object? ExtractValue<T>(SpanPointer objectLocation, Type propertyType, Granny2TypeDefinition<T> typeInfo, int size, Dictionary<int, object?> references) where T : struct, ISignedNumber<T> {
 		if (propertyType.IsArray || (propertyType.IsConstructedGenericType && propertyType.GetGenericTypeDefinition() == typeof(List<>))) {
 			object? array = null;
 			Action<int> init;
@@ -337,11 +550,6 @@ public sealed class Granny2File : IDisposable {
 					}
 
 					var nestedObjectLocation = Resolve(offset);
-
-					if (references.TryGetValue(nestedObjectLocation, out var value)) {
-						return value;
-					}
-
 					var nestedSize = CalculateTypeSize<T>(nestedType);
 					for (var index = 0; index < count; ++index) {
 						try {
@@ -363,11 +571,6 @@ public sealed class Granny2File : IDisposable {
 					}
 
 					var nestedObjectLocation = Resolve(offset);
-
-					if (references.TryGetValue(nestedObjectLocation, out var value)) {
-						return value;
-					}
-
 					var nestedSize = Unsafe.SizeOf<T>();
 					for (var index = 0; index < count; ++index) {
 						try {
@@ -482,23 +685,18 @@ public sealed class Granny2File : IDisposable {
 
 		if (propertyType.IsValueType || propertyType.IsPrimitive || propertyType.IsEnum) {
 			var realType = propertyType.IsEnum ? propertyType.GetEnumUnderlyingType() : propertyType;
-			var realSize = Marshal.SizeOf(realType);
-			if (realSize <= size && objectLocation.Span.Length >= realSize) {
-				var span = objectLocation.Span;
-				unsafe {
-					fixed (byte* pin = &span.GetPinnableReference()) {
-						var value = Marshal.PtrToStructure((nint) pin, realType)!;
+			var span = objectLocation.Span;
+			unsafe {
+				fixed (byte* pin = &span.GetPinnableReference()) {
+					var value = Marshal.PtrToStructure((nint) pin, realType)!;
 
-						if (propertyType.IsEnum) {
-							value = Enum.ToObject(propertyType, value);
-						}
-
-						return value;
+					if (propertyType.IsEnum) {
+						value = Enum.ToObject(propertyType, value);
 					}
+
+					return value;
 				}
 			}
-
-			throw new InvalidOperationException();
 		}
 
 		throw new InvalidOperationException();
@@ -509,4 +707,27 @@ public sealed class Granny2File : IDisposable {
 	public SpanPointer Resolve(int address) => new(FileData.Memory.Span, address);
 	public SpanPointer Resolve(Granny2Reference ptr) => Resolve(Dereference(ptr));
 	public SpanPointer Resolve(Granny2SectionId section, int offset) => Resolve(Dereference(section, offset));
+
+	public void DebugType(SpanPointer ptr, string indent, Dictionary<int, int> visited) {
+		EnumerateTypeMembers(ptr, typeInfo => {
+			Console.Write($"{indent}{typeInfo.Type:G} {typeInfo.GetName(this)}");
+			if (typeInfo.ArraySize > 1) {
+				Console.Write($"[{typeInfo.ArraySize}]");
+			}
+
+			if (typeInfo.ChildrenOffset != 0) {
+				if (visited.TryGetValue(typeInfo.ChildrenOffset, out var typeIndex)) {
+					Console.WriteLine($" &{typeIndex}");
+				} else {
+					typeIndex = visited[typeInfo.ChildrenOffset] = visited.Count + 1;
+					Console.WriteLine($" &{typeIndex}");
+					DebugType(typeInfo.GetTypeDefinition(this), indent + "\t", visited);
+				}
+			} else {
+				Console.WriteLine();
+			}
+
+			return true;
+		});
+	}
 }

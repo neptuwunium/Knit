@@ -8,5 +8,5 @@ public class Model : GrannyExtendable {
 	public string Name { get; set; } = "";
 	public Skeleton? Skeleton { get; set; }
 	public XForm InitialPlacement { get; set; }
-	public List<Mesh> MeshBindings { get; set; } = [];
+	public List<MeshBinding> MeshBindings { get; set; } = [];
 }

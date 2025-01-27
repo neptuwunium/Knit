@@ -9,6 +9,14 @@ public class Mesh : GrannyExtendable {
 	public VertexData? PrimaryVertexData { get; set; }
 	public TriTopology? PrimaryTopology { get; set; }
 	public List<MorphTarget> MorphTargets { get; set; } = [];
-	public List<Material> MaterialBindings { get; set; } = [];
+	public List<MaterialBinding> MaterialBindings { get; set; } = [];
 	public List<MeshBone> BoneBindings { get; set; } = [];
+}
+
+public class MaterialBinding {
+	public Material? Material { get; set; }
+}
+
+public class MeshBinding {
+	public Mesh? Mesh { get; set; }
 }

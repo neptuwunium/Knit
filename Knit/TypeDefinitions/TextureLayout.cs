@@ -9,6 +9,6 @@ namespace Knit.TypeDefinitions;
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 public record struct TextureLayout {
 	public int BytesPerPixel { get; set; }
-	public int ShiftForComponent { get; set; }
-	public int BitsForComponent { get; set; }
+	public ComponentInfo ShiftForComponent { get; set; }
+	public ComponentInfo BitsForComponent { get; set; }
 }

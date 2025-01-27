@@ -5,6 +5,5 @@
 namespace Knit.TypeDefinitions;
 
 public abstract class GrannyExtendable {
-	// todo: disabled until we implement untyped unmarshalling.
-	// public Dictionary<string, object> ExtendedData { get; set; } = [];
+	public object? ExtendedData { get; set; }
 }

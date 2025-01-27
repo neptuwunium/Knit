@@ -50,7 +50,7 @@ public record struct Granny2TypeDefinition<T> : IGranny2TypeDefinition where T :
 		       };
 	}
 
-	public int GetArraySize(Granny2File gr) => GetSize(gr) * Math.Max(1, ArraySize);
+	public int GetTotalSize(Granny2File gr) => GetSize(gr) * Math.Max(1, ArraySize);
 
 	public string GetName(Granny2File gr) {
 		var offset = int.CreateChecked(NameOffset);
@@ -62,4 +62,8 @@ public record struct Granny2TypeDefinition<T> : IGranny2TypeDefinition where T :
 		var end = ptr.Span.IndexOf((byte) 0);
 		return Encoding.ASCII.GetString(ptr.Span[..end]);
 	}
+
+	public IGranny2TypeDefinition Single() => this with {
+		ArraySize = 0,
+	};
 }

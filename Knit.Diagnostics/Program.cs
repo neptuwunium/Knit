@@ -81,32 +81,9 @@ internal static class Program {
 		} else {
 			Console.WriteLine("\tRoot Type:");
 			var rootPtr = granny.Resolve(granny.FileInfo.RootTypeDefinition);
-			IterateType(granny, rootPtr, "\t\t", []);
+			granny.DebugType(rootPtr, "\t\t", []);
 		}
 
 		Console.WriteLine();
-	}
-
-	private static void IterateType(Granny2File granny, SpanPointer ptr, string indent, Dictionary<int, int> visited) {
-		granny.EnumerateTypeMembers(ptr, typeInfo => {
-			Console.Write($"{indent}{typeInfo.Type:G} {typeInfo.GetName(granny)}");
-			if (typeInfo.ArraySize > 1) {
-				Console.Write($"[{typeInfo.ArraySize}]");
-			}
-
-			if (typeInfo.ChildrenOffset != 0) {
-				if (visited.TryGetValue(typeInfo.ChildrenOffset, out var typeIndex)) {
-					Console.WriteLine($" &{typeIndex}");
-				} else {
-					typeIndex = visited[typeInfo.ChildrenOffset] = visited.Count + 1;
-					Console.WriteLine($" &{typeIndex}");
-					IterateType(granny, typeInfo.GetTypeDefinition(granny), indent + "\t", visited);
-				}
-			} else {
-				Console.WriteLine();
-			}
-
-			return true;
-		});
 	}
 }
