@@ -90,6 +90,10 @@ internal static class Program {
 	private static void IterateType(Granny2File granny, SpanPointer ptr, string indent, Dictionary<int, int> visited) {
 		granny.EnumerateTypeMembers(ptr, typeInfo => {
 			Console.Write($"{indent}{typeInfo.Type:G} {typeInfo.GetName(granny)}");
+			if (typeInfo.ArraySize > 1) {
+				Console.Write($"[{typeInfo.ArraySize}]");
+			}
+
 			if (typeInfo.ChildrenOffset != 0) {
 				if (visited.TryGetValue(typeInfo.ChildrenOffset, out var typeIndex)) {
 					Console.WriteLine($" &{typeIndex}");
