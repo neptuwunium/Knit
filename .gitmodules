@@ -1,0 +1,3 @@
+[submodule "glTFScaffold"]
+	path = glTFScaffold
+	url = https://github.com/yretenai/glTFScaffold.git
