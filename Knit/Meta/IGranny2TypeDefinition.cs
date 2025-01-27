@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Legiayayana
+//
+// SPDX-License-Identifier: EUPL-1.2
+
 namespace Knit.Meta;
 
 public interface IGranny2TypeDefinition {
@@ -12,3 +16,5 @@ public interface IGranny2TypeDefinition {
 	public int GetArraySize(Granny2File gr);
 	public string GetName(Granny2File gr);
 }
+
+public record Granny2TinyType(string Name, int ArraySize, Granny2MemberType MemberType);

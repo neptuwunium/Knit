@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2025 Legiayayana
+//
+// SPDX-License-Identifier: EUPL-1.2
+
 namespace Knit;
 
 public readonly ref struct SpanPointer(Span<byte> span, int offset = 0) {
