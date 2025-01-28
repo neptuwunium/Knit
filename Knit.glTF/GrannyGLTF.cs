@@ -88,6 +88,9 @@ public sealed class GrannyGLTF : IDisposable {
 		File = stream;
 		Resource = stream.LoadRoot() ?? throw new InvalidOperationException();
 		OneBoned = oneBoned;
+		RootNode = Root.CreateNode().Node;
+		RootNode.Name = Path.GetFileNameWithoutExtension(Resource.Name.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[^1]);
+		Scale = 1 / Math.Max(1, Resource.ArtToolInfo.UnitsPerMeter);
 
 		Debug.Assert(Resource.Models.Count > 0);
 
@@ -101,6 +104,8 @@ public sealed class GrannyGLTF : IDisposable {
 	public Granny2File File { get; }
 	public GrannyFileRoot Resource { get; }
 	public GL.Root Root { get; } = new();
+	public GL.Node RootNode { get; }
+	public float Scale { get; }
 	public MemoryStream Buffer { get; } = new();
 	public Dictionary<string, int> MeshMap { get; } = [];
 	public Dictionary<string, int> MaterialMap { get; } = [];
@@ -150,11 +155,11 @@ public sealed class GrannyGLTF : IDisposable {
 				(bone, boneId) = hierarchy[boneData.ParentIndex].CreateNode(Root);
 			}
 
-			boneMap[boneData.Name] = boneId;
 			skin.Joints.Add(boneId);
+			boneMap[boneData.Name] = hierarchy.Count;
 			hierarchy.Add(bone);
-			matrices[index] = boneData.InverseTransform;
-			boneData.Transform.ToGLTF(bone);
+			matrices[index] = boneData.InverseTransform * Matrix4x4.CreateScale(Scale);
+			boneData.Transform.ToGLTF(bone, Scale);
 			bone.Name = boneData.Name;
 		}
 
@@ -165,10 +170,10 @@ public sealed class GrannyGLTF : IDisposable {
 	}
 
 	public void CreateModel(Model model) {
-		var (meshNode, _) = Root.CreateNode();
+		var (meshNode, _) = RootNode.CreateNode(Root);
 
 		int? skinId = model.Skeleton != null ? CreateSkeleton(model.Skeleton, meshNode) : null;
-		model.Transform.ToGLTF(meshNode);
+		model.Transform.ToGLTF(meshNode, Scale);
 		meshNode.Name = model.Name;
 
 		foreach (var binding in model.MeshBindings) {
@@ -271,9 +276,14 @@ public sealed class GrannyGLTF : IDisposable {
 			var localIndices = ((Span<short>) indices)[..4];
 			var localWeights = ((Span<float>) weights)[..4];
 
-			MemoryMarshal.Write(alloc.Position[(index * 12)..], vertices[index].Position);
-			minPos = Vector3.Min(minPos, vertices[index].Position);
-			maxPos = Vector3.Max(maxPos, vertices[index].Position);
+			var pos = vertices[index].Position;
+			if (bones.Count == 0) {
+				pos *= Scale;
+			}
+
+			MemoryMarshal.Write(alloc.Position[(index * 12)..], pos);
+			minPos = Vector3.Min(minPos, pos);
+			maxPos = Vector3.Max(maxPos, pos);
 			var vertNormal = vertices[index].Normal;
 			if (vertNormal.X > 0 || vertNormal.Y > 0 || vertNormal.Z > 0) {
 				MemoryMarshal.Write(alloc.Normal[(index * 12)..], vertNormal);
@@ -298,26 +308,26 @@ public sealed class GrannyGLTF : IDisposable {
 			MemoryMarshal.Write(alloc.UV5[(index * 8)..], vertices[index].TextureCoordinates[5]);
 			MemoryMarshal.Write(alloc.UV6[(index * 8)..], vertices[index].TextureCoordinates[6]);
 			MemoryMarshal.Write(alloc.UV7[(index * 8)..], vertices[index].TextureCoordinates[7]);
+
 			if (bones.Count > 0 && boneMap.Count > 0) {
 				var modelIndices = MemoryMarshal.Cast<byte, short>(alloc.Joint[(index * 8)..]);
-				if (OneBoned && (attributePresence & VertexAttributePresence.BoneWeights) == 0) {
-					modelIndices[0] = (short) (boneMap[bones[localIndices[0]].Name] - 1);
-					localWeights[0] = 1.0f;
-				} else {
-					var seenIds = new HashSet<int>();
-					for (var boneEntry = 0; boneEntry < Math.Min(vertices[index].ReferencedBoneCount, 4); ++boneEntry) {
-						var boneId = boneMap[bones[localIndices[boneEntry]].Name] - 1;
-						if (seenIds.Add(boneId) || (attributePresence & VertexAttributePresence.BoneWeights) != 0) {
-							modelIndices[boneEntry] = (short) boneId;
-						} else {
-							modelIndices[boneEntry] = 0;
-						}
+				var seenIds = new HashSet<int>();
+				for (var boneEntry = 0; boneEntry < Math.Min(vertices[index].ReferencedBoneCount, 4); ++boneEntry) {
+					var boneId = boneMap[bones[localIndices[boneEntry]].Name];
+					if (seenIds.Add(boneId) || (attributePresence & VertexAttributePresence.BoneWeights) != 0) {
+						modelIndices[boneEntry] = (short) boneId;
+					} else {
+						modelIndices[boneEntry] = 0;
 					}
 
-					if ((attributePresence & VertexAttributePresence.BoneWeights) == 0) {
-						for (var boneEntry = 0; boneEntry < seenIds.Count; ++boneEntry) {
-							localWeights[boneEntry] = 1.0f / seenIds.Count;
-						}
+					if (OneBoned && (attributePresence & VertexAttributePresence.BoneWeights) == 0) {
+						break;
+					}
+				}
+
+				if ((attributePresence & VertexAttributePresence.BoneWeights) == 0) {
+					for (var boneEntry = 0; boneEntry < seenIds.Count; ++boneEntry) {
+						localWeights[boneEntry] = 1.0f / seenIds.Count;
 					}
 				}
 
