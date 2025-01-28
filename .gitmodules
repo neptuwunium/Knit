@@ -5,3 +5,6 @@
 [submodule "glTFScaffold"]
 	path = glTFScaffold
 	url = https://github.com/yretenai/glTFScaffold.git
+[submodule "DragonLib"]
+	path = DragonLib
+	url = https://github.com/yretenai/DragonLib.git

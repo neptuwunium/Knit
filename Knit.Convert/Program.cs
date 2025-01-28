@@ -2,13 +2,43 @@
 //
 // SPDX-License-Identifier: EUPL-1.2
 
+using DragonLib.CommandLine;
 using Knit.glTF;
 
 namespace Knit.Convert;
 
+internal record ProgramFlags : CommandLineFlags {
+	[Flag("one-bone", Help = "Treat meshes that have no weight information has having one bone")]
+	public bool OneBone { get; set; }
+
+	[Flag("generate-normals", Help = "Generate smooth normals when no normal data is present")]
+	public bool GenerateNormals { get; set; }
+
+	[Flag("rescale", Help = "Rescale so that 1 unit is 1 meter")]
+	public bool Rescale { get; set; }
+
+	[Flag("paths", Help = "Paths of directories or files to process", Positional = 0)]
+	public HashSet<string> Paths { get; set; } = [];
+}
+
 internal static class Program {
-	private static void Main(string[] args) {
-		foreach (var arg in args) {
+	private static ProgramFlags Flags { get; set; } = null!;
+	private static GrannyGLTFOptions ExportOptions { get; set; } = null!;
+
+	private static void Main() {
+		var flags = CommandLineFlagsParser.ParseFlags<ProgramFlags>();
+		if (flags == null) {
+			return;
+		}
+
+		Flags = flags;
+		ExportOptions = new GrannyGLTFOptions {
+			OneBoned = Flags.OneBone,
+			GenerateNormals = Flags.GenerateNormals,
+			Rescale = Flags.Rescale,
+		};
+
+		foreach (var arg in Flags.Paths) {
 			var fileInfo = new FileInfo(arg);
 
 			if ((fileInfo.Attributes & FileAttributes.Directory) != 0) {
@@ -31,7 +61,7 @@ internal static class Program {
 	#endif
 		using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
 		using var granny = new Granny2File(stream);
-		using var gltf = new GrannyGLTF(granny.LoadRoot() ?? throw new InvalidOperationException());
+		using var gltf = new GrannyGLTF(granny.LoadRoot() ?? throw new InvalidOperationException(), ExportOptions);
 		gltf.Write(Path.ChangeExtension(file, ".gltf"));
 	#if !DEBUG
 		} catch (Exception e) {

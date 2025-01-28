@@ -79,15 +79,22 @@ public readonly ref struct VertexAllocation : IDisposable {
 	}
 }
 
+public record GrannyGLTFOptions {
+	public bool Rescale { get; set; } = false;
+	public bool OneBoned { get; set; } = false;
+	public bool GenerateNormals { get; set; } = false;
+}
+
 public sealed class GrannyGLTF : IDisposable {
-	public GrannyGLTF(GrannyFileRoot resource) {
+	public GrannyGLTF(GrannyFileRoot resource, GrannyGLTFOptions options) {
 		Resource = resource;
 		RootNode = Root.CreateNode().Node;
+		ExportOptions = options;
 		if (Resource.Name.Length > 0) {
 			RootNode.Name = Path.GetFileNameWithoutExtension(Resource.Name.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[^1]);
 		}
 
-		Scale = 1 / Math.Max(1, Resource.ArtToolInfo.UnitsPerMeter);
+		Scale = options.Rescale ? 1.0f / Math.Max(1.0f, Resource.ArtToolInfo.UnitsPerMeter) : 1;
 
 		Debug.Assert(Resource.Models.Count > 0);
 
@@ -100,9 +107,7 @@ public sealed class GrannyGLTF : IDisposable {
 		}
 	}
 
-
-	public bool OneBoned { get; set; } = true;
-	public bool GenerateNormals { get; set; } = true;
+	public GrannyGLTFOptions ExportOptions { get; }
 	public GrannyFileRoot Resource { get; }
 	public GL.Root Root { get; } = new();
 	public GL.Node RootNode { get; }
@@ -320,7 +325,7 @@ public sealed class GrannyGLTF : IDisposable {
 						modelIndices[boneEntry] = 0;
 					}
 
-					if (OneBoned && (attributePresence & VertexAttributePresence.BoneWeights) == 0) {
+					if (ExportOptions.OneBoned && (attributePresence & VertexAttributePresence.BoneWeights) == 0) {
 						break;
 					}
 				}
@@ -344,7 +349,7 @@ public sealed class GrannyGLTF : IDisposable {
 
 		var normal = alloc.Normal;
 		var hasNormal = (attributePresence & VertexAttributePresence.Normal) != 0;
-		if (!hasNormal && GenerateNormals) {
+		if (!hasNormal && ExportOptions.GenerateNormals) {
 			if (type == GL.AccessorComponentType.UnsignedInt) {
 				CalculateNormals<uint>(ref normal, alloc.Position, faces);
 			} else {

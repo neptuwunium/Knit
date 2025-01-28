@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "glTFScaffold", "glTFScaffol
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Knit.glTF", "Knit.glTF\Knit.glTF.csproj", "{4AF2521B-E864-40AE-AC8C-A3F082372B5E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DragonLib", "DragonLib\DragonLib\DragonLib.csproj", "{4DF58E79-FDBB-44A7-9479-58D447D01F19}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{4AF2521B-E864-40AE-AC8C-A3F082372B5E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4AF2521B-E864-40AE-AC8C-A3F082372B5E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4AF2521B-E864-40AE-AC8C-A3F082372B5E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4DF58E79-FDBB-44A7-9479-58D447D01F19}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4DF58E79-FDBB-44A7-9479-58D447D01F19}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4DF58E79-FDBB-44A7-9479-58D447D01F19}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4DF58E79-FDBB-44A7-9479-58D447D01F19}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
