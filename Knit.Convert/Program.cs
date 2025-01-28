@@ -26,7 +26,7 @@ internal static class Program {
 
 	private static void ProcessFile(string file) {
 		Console.WriteLine($"{file}:");
-		using var gltf = new GrannyGLTF(file);
+		using var gltf = new GrannyGLTF(file, true);
 		gltf.Write(Path.ChangeExtension(file, ".gltf"));
 	}
 }

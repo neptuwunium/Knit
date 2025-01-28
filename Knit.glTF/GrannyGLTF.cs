@@ -80,13 +80,14 @@ public readonly ref struct VertexAllocation : IDisposable {
 }
 
 public sealed class GrannyGLTF : IDisposable {
-	public GrannyGLTF(string path) : this(new FileInfo(path)) { }
-	public GrannyGLTF(FileInfo info) : this(info.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) { }
-	public GrannyGLTF(Stream stream) : this(new Granny2File(stream)) { }
+	public GrannyGLTF(string path, bool oneBoned) : this(new FileInfo(path), oneBoned) { }
+	public GrannyGLTF(FileInfo info, bool oneBoned) : this(info.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite), oneBoned) { }
+	public GrannyGLTF(Stream stream, bool oneBoned) : this(new Granny2File(stream), oneBoned) { }
 
-	public GrannyGLTF(Granny2File stream) {
+	public GrannyGLTF(Granny2File stream, bool oneBoned) {
 		File = stream;
 		Resource = stream.LoadRoot() ?? throw new InvalidOperationException();
+		OneBoned = oneBoned;
 
 		Debug.Assert(Resource.Models.Count > 0);
 
@@ -96,6 +97,7 @@ public sealed class GrannyGLTF : IDisposable {
 	}
 
 
+	public bool OneBoned { get; set; }
 	public Granny2File File { get; }
 	public GrannyFileRoot Resource { get; }
 	public GL.Root Root { get; } = new();
@@ -298,18 +300,25 @@ public sealed class GrannyGLTF : IDisposable {
 			MemoryMarshal.Write(alloc.UV7[(index * 8)..], vertices[index].TextureCoordinates[7]);
 			if (bones.Count > 0 && boneMap.Count > 0) {
 				var modelIndices = MemoryMarshal.Cast<byte, short>(alloc.Joint[(index * 8)..]);
-				var seenIds = new HashSet<int>();
-				for (var boneEntry = 0; boneEntry < 4; ++boneEntry) {
-					var boneId = boneMap[bones[localIndices[boneEntry]].Name] - 1;
-					if (seenIds.Add(boneId)) {
-						modelIndices[boneEntry] = (short) boneId;
-					} else {
-						modelIndices[boneEntry] = 0;
+				if (OneBoned && (attributePresence & VertexAttributePresence.BoneWeights) == 0) {
+					modelIndices[0] = (short) (boneMap[bones[localIndices[0]].Name] - 1);
+					localWeights[0] = 1.0f;
+				} else {
+					var seenIds = new HashSet<int>();
+					for (var boneEntry = 0; boneEntry < Math.Min(vertices[index].ReferencedBoneCount, 4); ++boneEntry) {
+						var boneId = boneMap[bones[localIndices[boneEntry]].Name] - 1;
+						if (seenIds.Add(boneId) || (attributePresence & VertexAttributePresence.BoneWeights) != 0) {
+							modelIndices[boneEntry] = (short) boneId;
+						} else {
+							modelIndices[boneEntry] = 0;
+						}
 					}
-				}
 
-				for (var boneEntry = 0; boneEntry < seenIds.Count; ++boneEntry) {
-					localWeights[boneEntry] = 1.0f / seenIds.Count;
+					if ((attributePresence & VertexAttributePresence.BoneWeights) == 0) {
+						for (var boneEntry = 0; boneEntry < seenIds.Count; ++boneEntry) {
+							localWeights[boneEntry] = 1.0f / seenIds.Count;
+						}
+					}
 				}
 
 				MemoryMarshal.AsBytes(localWeights).CopyTo(alloc.Weight[(index * 16)..]);
