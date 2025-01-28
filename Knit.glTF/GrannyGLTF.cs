@@ -83,10 +83,17 @@ public sealed class GrannyGLTF : IDisposable {
 	public GrannyGLTF(GrannyFileRoot resource) {
 		Resource = resource;
 		RootNode = Root.CreateNode().Node;
-		RootNode.Name = Path.GetFileNameWithoutExtension(Resource.Name.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[^1]);
+		if (Resource.Name.Length > 0) {
+			RootNode.Name = Path.GetFileNameWithoutExtension(Resource.Name.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[^1]);
+		}
+
 		Scale = 1 / Math.Max(1, Resource.ArtToolInfo.UnitsPerMeter);
 
 		Debug.Assert(Resource.Models.Count > 0);
+
+		foreach (var skeleton in Resource.Skeletons) {
+			CreateSkeleton(skeleton);
+		}
 
 		foreach (var model in Resource.Models) {
 			CreateModel(model);
@@ -123,7 +130,7 @@ public sealed class GrannyGLTF : IDisposable {
 		Buffer.Dispose();
 	}
 
-	public int CreateSkeleton(Skeleton skeleton, GL.Node node) {
+	public int CreateSkeleton(Skeleton skeleton) {
 		if (SkeletonMap.TryGetValue(skeleton.Name, out var id)) {
 			return id;
 		}
@@ -142,7 +149,7 @@ public sealed class GrannyGLTF : IDisposable {
 			int boneId;
 
 			if (boneData.ParentIndex == -1) {
-				(bone, boneId) = node.CreateNode(Root);
+				(bone, boneId) = RootNode.CreateNode(Root);
 				skin.Skeleton = boneId;
 			} else {
 				(bone, boneId) = hierarchy[boneData.ParentIndex].CreateNode(Root);
@@ -165,7 +172,7 @@ public sealed class GrannyGLTF : IDisposable {
 	public void CreateModel(Model model) {
 		var (meshNode, _) = RootNode.CreateNode(Root);
 
-		int? skinId = model.Skeleton != null ? CreateSkeleton(model.Skeleton, meshNode) : null;
+		int? skinId = model.Skeleton != null ? CreateSkeleton(model.Skeleton) : null;
 		model.Transform.ToGLTF(meshNode, Scale);
 		meshNode.Name = model.Name;
 
