@@ -110,9 +110,8 @@ public sealed class Granny2File : IDisposable {
 
 			if (header.ShouldConvertEndianness) {
 				stream.Position = section.MarshalledFixup.Offset;
-				using var marshalledFixups = MemoryPool<Granny2MarshalledFixup>.Shared.Rent(section.MarshalledFixup.Count);
+				using var marshalledFixups = ReadFixups<Granny2MarshalledFixup>(stream, section.Compression >= Granny2CompressionType.BitKnit1, section.MarshalledFixup.Count);
 				var marshalledFixupsSpan = marshalledFixups.Memory.Span[..section.MarshalledFixup.Count];
-				stream.ReadExactly(marshalledFixupsSpan.AsBytes());
 				foreach (var marshal in marshalledFixupsSpan) {
 					var objectLocation = new SpanPointer(fileData, Dereference((Granny2SectionId) index, marshal.ObjectOffset));
 					var typeLocation = new SpanPointer(fileData, Dereference(marshal.TypeLocation));
@@ -121,12 +120,34 @@ public sealed class Granny2File : IDisposable {
 			}
 
 			stream.Position = section.Fixup.Offset;
-			using var fixups = MemoryPool<Granny2Fixup>.Shared.Rent(section.Fixup.Count);
+			using var fixups = ReadFixups<Granny2Fixup>(stream, section.Compression >= Granny2CompressionType.BitKnit1, section.Fixup.Count);
 			var fixupsSpan = fixups.Memory.Span[..section.Fixup.Count];
-			stream.ReadExactly(fixupsSpan.AsBytes());
 			foreach (var fixup in fixupsSpan) {
 				MemoryMarshal.Write(Resolve(Dereference((Granny2SectionId) index, fixup.FromOffset)), Dereference(fixup.To));
 			}
+		}
+	}
+
+	private static IMemoryOwner<T> ReadFixups<T>(Stream stream, bool isBitKnit, int count) where T : struct {
+		IMemoryOwner<T>? fixups = null;
+		try {
+			fixups = MemoryPool<T>.Shared.Rent(count);
+			var fixupsSpan = fixups.Memory.Span[..count].AsBytes();
+			if (isBitKnit) {
+				var compressedSize = 0;
+				stream.ReadExactly(new Span<int>(ref compressedSize).AsBytes());
+				using var compressed = MemoryPool<byte>.Shared.Rent(compressedSize);
+				var compressedSpan = compressed.Memory.Span[..compressedSize];
+				stream.ReadExactly(compressedSpan);
+				GrannyBitKnitCompression.Decompress(compressedSpan, fixupsSpan);
+			} else {
+				stream.ReadExactly(fixupsSpan);
+			}
+
+			return fixups;
+		} catch {
+			fixups?.Dispose();
+			throw;
 		}
 	}
 
@@ -237,6 +258,17 @@ public sealed class Granny2File : IDisposable {
 	public object? LoadType<T>(Type type, SpanPointer objectLocation, SpanPointer typeLocation, Dictionary<int, object?> references) where T : struct, ISignedNumber<T> {
 		if (references.TryGetValue(objectLocation, out var cached)) {
 			return cached;
+		}
+
+		if (type == typeof(string)) {
+			var offset = int.CreateChecked(MemoryMarshal.Read<T>(objectLocation));
+			if (offset == 0) {
+				return string.Empty;
+			}
+
+			var nestedOffset = Resolve(offset);
+			var end = nestedOffset.Span.IndexOf((byte) 0);
+			return Encoding.ASCII.GetString(nestedOffset.Span[..end]);
 		}
 
 		if (type == typeof(object)) {
