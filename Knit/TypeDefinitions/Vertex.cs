@@ -34,11 +34,13 @@ public class Vertex : IGrannyType {
 				Attributes |= VertexAttributePresence.Normal;
 				return true;
 			case nameof(Tangent):
-				Tangent = ReadVector4(file, typeInfo, objectLocation);
-				Attributes |= VertexAttributePresence.Tangent;
-				if (typeInfo.ArraySize == 4) {
-					Attributes |= VertexAttributePresence.TangentHasW;
+				var tangent = ReadVector4(file, typeInfo, objectLocation);
+				if (typeInfo.ArraySize < 4) {
+					tangent.W = 1;
 				}
+
+				Tangent = tangent;
+				Attributes |= VertexAttributePresence.Tangent;
 
 				return true;
 			case nameof(Binormal):
@@ -72,7 +74,7 @@ public class Vertex : IGrannyType {
 			case nameof(BoneIndices): {
 				ReferencedBoneCount = typeInfo.ArraySize;
 				var indices = new VertexBoneIndices();
-				var stack = (Span<int>) indices;
+				var stack = (Span<short>) indices;
 				ReadArray(file, typeInfo, objectLocation, ref stack);
 				BoneIndices = indices;
 				Attributes |= VertexAttributePresence.BoneIndices;
@@ -96,7 +98,7 @@ public class Vertex : IGrannyType {
 			}
 
 			var textureCoordinates = TextureCoordinates;
-			var value = ReadVector3(file, typeInfo, objectLocation);
+			var value = ReadVector2(file, typeInfo, objectLocation);
 			textureCoordinates[index] = value;
 			TextureCoordinates = textureCoordinates;
 			Attributes |= (VertexAttributePresence) ((ulong) VertexAttributePresence.TextureCoordinates0 << index);
@@ -104,6 +106,12 @@ public class Vertex : IGrannyType {
 		}
 
 		return false;
+	}
+
+	private static Vector2 ReadVector2(Granny2File file, IGranny2TypeDefinition typeInfo, SpanPointer objectLocation) {
+		Span<float> stack = stackalloc float[2];
+		ReadArray(file, typeInfo, objectLocation, ref stack);
+		return MemoryMarshal.Read<Vector2>(MemoryMarshal.AsBytes(stack));
 	}
 
 	private static Vector3 ReadVector3(Granny2File file, IGranny2TypeDefinition typeInfo, SpanPointer objectLocation) {
@@ -119,12 +127,12 @@ public class Vertex : IGrannyType {
 	}
 
 	private static void ReadArray<T>(Granny2File file, IGranny2TypeDefinition typeInfo, SpanPointer objectLocation, ref Span<T> stack) where T : unmanaged, INumber<T> {
-		if (typeInfo.ArraySize == 0 || typeInfo.ArraySize > stack.Length) {
+		if (typeInfo.ArraySize == 0) {
 			throw new InvalidOperationException();
 		}
 
 		var pos = objectLocation;
-		for (var index = 0; index < typeInfo.ArraySize; ++index) {
+		for (var index = 0; index < Math.Min(typeInfo.ArraySize, stack.Length); ++index) {
 			switch (typeInfo.Type) {
 				case Granny2MemberType.End: return;
 				case Granny2MemberType.Real16: {

@@ -9,14 +9,14 @@ namespace Knit.TypeDefinitions;
 
 [InlineArray(256)]
 public struct VertexBoneIndices : IEquatable<VertexBoneIndices> {
-	public int Value;
+	public short Value;
 
-	public bool Equals(VertexBoneIndices other) => ((Span<int>) this).SequenceEqual(other);
+	public bool Equals(VertexBoneIndices other) => ((Span<short>) this).SequenceEqual(other);
 	public override bool Equals(object? obj) => obj is VertexBoneWeights other && Equals(other);
 
 	public override int GetHashCode() {
 		var hashCode = new HashCode();
-		hashCode.AddBytes(MemoryMarshal.AsBytes((Span<int>) this));
+		hashCode.AddBytes(MemoryMarshal.AsBytes((Span<short>) this));
 		return hashCode.ToHashCode();
 	}
 

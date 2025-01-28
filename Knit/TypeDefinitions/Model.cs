@@ -7,6 +7,6 @@ namespace Knit.TypeDefinitions;
 public class Model : GrannyExtendable {
 	public string Name { get; set; } = "";
 	public Skeleton? Skeleton { get; set; }
-	public XForm InitialPlacement { get; set; }
+	[GrannyMember("InitialPlacement")] public XForm Transform { get; set; }
 	public List<MeshBinding> MeshBindings { get; set; } = [];
 }

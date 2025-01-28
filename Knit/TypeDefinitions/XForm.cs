@@ -13,4 +13,6 @@ public record struct XForm {
 	public Vector3 Position { get; set; }
 	public Quaternion Rotation { get; set; }
 	public Matrix3x3 ScaleMatrix { get; set; }
+
+	public Vector3 Scale => new(ScaleMatrix.M11, ScaleMatrix.M22, ScaleMatrix.M33);
 }
