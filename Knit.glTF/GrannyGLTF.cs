@@ -42,7 +42,7 @@ public readonly ref struct VertexAllocation : IDisposable {
 		UV7 = MemoryMarshal.AsBytes(TexCoordArray.AsSpan(count * 2 * 7, count * 2));
 
 		Weight.Clear();
-		Normal.Clear();
+		Joint.Clear();
 	}
 
 	public float[] PositionArray { get; }
@@ -272,7 +272,11 @@ public sealed class GrannyGLTF : IDisposable {
 			MemoryMarshal.Write(alloc.Position[(index * 12)..], vertices[index].Position);
 			minPos = Vector3.Min(minPos, vertices[index].Position);
 			maxPos = Vector3.Max(maxPos, vertices[index].Position);
-			MemoryMarshal.Write(alloc.Normal[(index * 12)..], Vector3.Normalize(vertices[index].Normal));
+			var vertNormal = vertices[index].Normal;
+			if (vertNormal.X > 0 || vertNormal.Y > 0 || vertNormal.Z > 0) {
+				MemoryMarshal.Write(alloc.Normal[(index * 12)..], vertNormal);
+			}
+
 			var tangent = vertices[index].Tangent;
 			if (tangent.X > 0 || tangent.Y > 0 || tangent.Z > 0) {
 				var tangent3 = Vector3.Normalize(Unsafe.As<Vector4, Vector3>(ref tangent));
@@ -389,7 +393,7 @@ public sealed class GrannyGLTF : IDisposable {
 		return attributes;
 	}
 
-	public void CalculateNormals<T>(ref Span<byte> normal, Span<byte> position, Span<byte> faces) where T : struct, INumberBase<T> {
+	public static void CalculateNormals<T>(ref Span<byte> normal, Span<byte> position, Span<byte> faces) where T : struct, INumberBase<T> {
 		normal.Clear();
 		var normalVec3 = MemoryMarshal.Cast<byte, Vector3>(normal);
 		var positionVec3 = MemoryMarshal.Cast<byte, Vector3>(position);
