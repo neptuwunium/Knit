@@ -56,14 +56,15 @@ internal static class Program {
 
 	private static void ProcessFile(string file) {
 		Console.WriteLine(file);
+
 	#if !DEBUG
 		try {
-	#endif
-		using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
-		using var granny = new Granny2File(stream);
-		using var gltf = new GrannyGLTF(granny.LoadRoot() ?? throw new InvalidOperationException(), ExportOptions);
-		gltf.Write(Path.ChangeExtension(file, ".gltf"));
-	#if !DEBUG
+		#endif
+			using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+			using var granny = new Granny2File(stream);
+			using var gltf = new GrannyGLTF(granny.LoadRoot() ?? throw new InvalidOperationException(), ExportOptions);
+			gltf.Write(Path.ChangeExtension(file, ".gltf"));
+		#if !DEBUG
 		} catch (Exception e) {
 			Console.Error.WriteLine($"Failed to convert {file}: {e}");
 		}
