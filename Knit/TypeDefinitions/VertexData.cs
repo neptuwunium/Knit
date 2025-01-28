@@ -8,4 +8,8 @@ public class VertexData {
 	public Vertex[] Vertices { get; set; } = [];
 	[GrannyMember("VertexComponentNames")] public List<string> ComponentNames { get; set; } = [];
 	[GrannyMember("VertexAnnotationSets")] public List<VertexAnnotation> Annotations { get; set; } = [];
+
+	public override string ToString() => "VertexData { " +
+	                                     $"Vertices = {Vertices.Length} " +
+	                                     "}";
 }

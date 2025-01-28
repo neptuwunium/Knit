@@ -16,4 +16,16 @@ public class TriTopology {
 	public int[] BonesForTriangle { get; set; } = [];
 	public int[] TriangleToBoneIndices { get; set; } = [];
 	[GrannyMember("TriAnnotationSets")] public List<VertexAnnotation> Annotations { get; set; } = [];
+
+	public override string ToString() => "TriTopology { " +
+	                                     $"Groups = {Groups.Count}, " +
+	                                     $"Faces = {Indices16.Length + Indices32.Length}, " +
+	                                     $"Vertex To Vertex = {VertexToVertexMap.Length}, " +
+	                                     $"Vertex To Triangle = {VertexToTriangleMap.Length}, " +
+	                                     $"Side To Neighbor = {SideToNeighborMap.Length}, " +
+	                                     $"Polygon Starts = {PolygonIndexStarts.Length}, " +
+	                                     $"Polygon Indices = {PolygonIndices.Length}, " +
+	                                     $"Bones For Triangle = {BonesForTriangle.Length}, " +
+	                                     $"Triangle To Bone = {TriangleToBoneIndices.Length} " +
+	                                     "}";
 }

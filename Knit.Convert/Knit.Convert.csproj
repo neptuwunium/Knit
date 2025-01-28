@@ -14,7 +14,7 @@ SPDX-License-Identifier: EUPL-1.2
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\DragonLib\DragonLib\DragonLib.csproj" />
+		<ProjectReference Include="..\DragonLib\DragonLib\DragonLib.csproj"/>
 		<ProjectReference Include="..\glTFScaffold\glTFScaffold.csproj"/>
 		<ProjectReference Include="..\Knit.glTF\Knit.glTF.csproj"/>
 		<ProjectReference Include="..\Knit\Knit.csproj"/>

@@ -5,9 +5,7 @@
 namespace Knit.TypeDefinitions;
 
 [Flags]
-public enum AccumulationFlags : uint {
-	Extracted = 1 << 0,
-	Sorted = 1 << 1,
-	VDA = 1 << 2,
-	Morphs = 1 << 3,
+public enum AnimationFlags : uint {
+	DefaultLoopCountValid = 1 << 0,
+	DefaultToLoopClamping = 1 << 1,
 }

@@ -128,6 +128,25 @@ public sealed class Granny2File : IDisposable {
 		}
 	}
 
+	public Granny2Header Header { get; }
+	public Granny2FileInfo FileInfo { get; }
+	public Memory<Granny2Section> Sections { get; }
+	public int[] SectionBaseAddress { get; }
+
+	public IMemoryOwner<byte> HeaderData { get; }
+	public IMemoryOwner<byte> FileData { get; }
+
+	public Func<string, Type?>? TypeResolver { get; set; }
+#if DEBUG
+	private HashSet<int> DebuggedTypes { get; } = [];
+#endif
+
+	public void Dispose() {
+		HeaderData.Dispose();
+		FileData.Dispose();
+		ArrayPool<int>.Shared.Return(SectionBaseAddress);
+	}
+
 	private static IMemoryOwner<T> ReadFixups<T>(Stream stream, bool isBitKnit, int count) where T : struct {
 		IMemoryOwner<T>? fixups = null;
 		try {
@@ -149,25 +168,6 @@ public sealed class Granny2File : IDisposable {
 			fixups?.Dispose();
 			throw;
 		}
-	}
-
-	public Granny2Header Header { get; }
-	public Granny2FileInfo FileInfo { get; }
-	public Memory<Granny2Section> Sections { get; }
-	public int[] SectionBaseAddress { get; }
-
-	public IMemoryOwner<byte> HeaderData { get; }
-	public IMemoryOwner<byte> FileData { get; }
-
-	public Func<string, Type?>? TypeResolver { get; set; }
-#if DEBUG
-	private HashSet<int> DebuggedTypes { get; } = [];
-#endif
-
-	public void Dispose() {
-		HeaderData.Dispose();
-		FileData.Dispose();
-		ArrayPool<int>.Shared.Return(SectionBaseAddress);
 	}
 
 	public void ApplyMarshal(SpanPointer objectLocation, int typeCount, SpanPointer typeLocation) {
@@ -525,7 +525,7 @@ public sealed class Granny2File : IDisposable {
 				var end = nestedOffset.Span.IndexOf((byte) 0);
 				return Encoding.ASCII.GetString(nestedOffset.Span[..end]);
 			}
-			case Granny2MemberType.Transform: return MemoryMarshal.Read<XForm>(objectLocation);
+			case Granny2MemberType.Transform: return MemoryMarshal.Read<Transform>(objectLocation);
 			case Granny2MemberType.Real32: return MemoryMarshal.Read<float>(objectLocation);
 			case Granny2MemberType.Int8: return MemoryMarshal.Read<sbyte>(objectLocation);
 			case Granny2MemberType.UInt8: return MemoryMarshal.Read<byte>(objectLocation);

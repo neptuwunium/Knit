@@ -4,10 +4,6 @@
 
 namespace Knit.TypeDefinitions;
 
-[Flags]
-public enum AccumulationFlags : uint {
-	Extracted = 1 << 0,
-	Sorted = 1 << 1,
-	VDA = 1 << 2,
-	Morphs = 1 << 3,
+public class MaterialBinding {
+	public Material? Material { get; set; }
 }

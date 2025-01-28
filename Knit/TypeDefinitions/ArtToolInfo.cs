@@ -16,4 +16,15 @@ public class ArtToolInfo : GrannyExtendable {
 	public Vector3 RightVector { get; set; }
 	public Vector3 UpVector { get; set; }
 	public Vector3 BackVector { get; set; }
+
+	public override string ToString() => "Art Tool Info = { " +
+	                                     $"Name = {Name}, " +
+	                                     $"Version = {MajorRevision}.{MinorRevision}, " +
+	                                     $"Pointer Size = {PointerSize}, " +
+	                                     $"Units Per Meter = {UnitsPerMeter}, " +
+	                                     $"Origin = {Origin}, " +
+	                                     $"Right = {RightVector}, " +
+	                                     $"Up = {UpVector}, " +
+	                                     $"Back = {BackVector} " +
+	                                     "}";
 }

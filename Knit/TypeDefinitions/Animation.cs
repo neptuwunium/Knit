@@ -11,5 +11,15 @@ public class Animation : GrannyExtendable {
 	public float Oversampling { get; set; }
 	public List<TrackGroup> TrackGroups { get; set; } = [];
 	public int DefaultLoopCount { get; set; }
-	public uint Flags { get; set; }
+	public AnimationFlags Flags { get; set; }
+
+	public override string ToString() => "Animation { " +
+	                                     $"Name = {Name}, " +
+	                                     $"Duration = {Duration}, " +
+	                                     $"Time Step = {TimeStep}, " +
+	                                     $"Oversampling = {Oversampling}, " +
+	                                     $"Loop Count = {DefaultLoopCount}, " +
+	                                     $"Flags = {Flags:F}, " +
+	                                     $"Tracks = {TrackGroups.Count} " +
+	                                     "}";
 }

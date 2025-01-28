@@ -8,4 +8,10 @@ public class Material : GrannyExtendable {
 	public string Name { get; set; } = "";
 	public List<MaterialMap> Maps { get; set; } = [];
 	public Texture? Texture { get; set; }
+
+	public override string ToString() => "Material { " +
+	                                     $"Name = {Name}, " +
+	                                     $"Maps = {Maps.Count}, " +
+	                                     $"Texture = {Texture?.Name ?? "None"} " +
+	                                     "}";
 }

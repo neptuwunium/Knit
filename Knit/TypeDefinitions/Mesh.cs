@@ -11,12 +11,11 @@ public class Mesh : GrannyExtendable {
 	public List<MorphTarget> MorphTargets { get; set; } = [];
 	public List<MaterialBinding> MaterialBindings { get; set; } = [];
 	public List<MeshBone> BoneBindings { get; set; } = [];
-}
 
-public class MaterialBinding {
-	public Material? Material { get; set; }
-}
-
-public class MeshBinding {
-	public Mesh? Mesh { get; set; }
+	public override string ToString() => "Mesh { " +
+	                                     $"Name = {Name}, " +
+	                                     $"Morph Targets = {MorphTargets.Count}, " +
+	                                     $"Materials = {MaterialBindings.Count}, " +
+	                                     $"Bones = {BoneBindings.Count} " +
+	                                     "}";
 }

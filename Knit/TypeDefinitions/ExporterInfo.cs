@@ -10,4 +10,9 @@ public class ExporterInfo : GrannyExtendable {
 	[GrannyMember("ExporterMinorRevision")] public int MinorRevision { get; set; }
 	[GrannyMember("ExporterCustomization")] public int Customization { get; set; }
 	[GrannyMember("ExporterBuildNumber")] public int BuildNumber { get; set; }
+
+	public override string ToString() => "Exporter Info = { " +
+	                                     $"Name = {Name}, " +
+	                                     $"Version = {MajorRevision}.{MinorRevision}.{Customization}.{BuildNumber} " +
+	                                     "}";
 }

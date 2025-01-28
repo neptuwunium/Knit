@@ -8,7 +8,7 @@ using Knit.TypeDefinitions;
 namespace Knit.glTF;
 
 public static class Extensions {
-	public static void ToGLTF(this XForm transform, Node node, float scale = 1.0f) {
+	public static void ToGLTF(this Transform transform, Node node, float scale = 1.0f) {
 		if ((transform.Flags & XFormFlags.HasPosition) != 0) {
 			node.Translation = (transform.Position * scale).ToGLTF();
 		}
