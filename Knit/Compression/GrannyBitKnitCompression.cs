@@ -324,7 +324,7 @@ public static partial class GrannyBitKnitCompression {
 			} else {
 				var copyOffsetLength = PopModel(ref src, CopyOffsetModel, ref state1, ref state2);
 				var copyOffsetBits = PopBits(ref src, (int) (copyOffsetLength % 16), ref state1, ref state2);
-				if (copyOffsetLength > 16) {
+				if (copyOffsetLength >= 16) {
 					copyOffsetBits = (copyOffsetBits << 16) | src.Pop();
 				}
 
