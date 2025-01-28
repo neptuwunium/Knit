@@ -683,7 +683,7 @@ public sealed class Granny2File : IDisposable {
 				return nested;
 			}
 
-			throw new InvalidOperationException();
+			return null;
 		}
 
 		if (propertyType.IsPrimitive) {

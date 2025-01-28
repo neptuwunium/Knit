@@ -234,7 +234,7 @@ public sealed class GrannyGLTF : IDisposable {
 			var view = Root.CreateBufferView(bytes.Slice(group.Start * 3 * stride, group.Count * 3 * stride), Buffer, null, GL.BufferViewTarget.ElementArrayBuffer).Id;
 
 			prim.Indices = Root.CreateAccessor(view, group.Count * 3, 0, GL.AccessorType.SCALAR, type).Id;
-			prim.Material = CreateMaterial(materials[group.MaterialIndex]);
+			prim.Material = CreateMaterial(materials.ElementAtOrDefault(group.MaterialIndex));
 
 			mesh.Primitives.Add(prim);
 		}
