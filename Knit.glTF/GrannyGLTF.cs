@@ -80,14 +80,13 @@ public readonly ref struct VertexAllocation : IDisposable {
 }
 
 public sealed class GrannyGLTF : IDisposable {
-	public GrannyGLTF(string path, bool oneBoned) : this(new FileInfo(path), oneBoned) { }
-	public GrannyGLTF(FileInfo info, bool oneBoned) : this(info.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite), oneBoned) { }
-	public GrannyGLTF(Stream stream, bool oneBoned) : this(new Granny2File(stream), oneBoned) { }
+	public GrannyGLTF(string path) : this(new FileInfo(path)) { }
+	public GrannyGLTF(FileInfo info) : this(info.Open(FileMode.Open, FileAccess.Read, FileShare.ReadWrite)) { }
+	public GrannyGLTF(Stream stream) : this(new Granny2File(stream)) { }
 
-	public GrannyGLTF(Granny2File stream, bool oneBoned) {
+	public GrannyGLTF(Granny2File stream) {
 		File = stream;
 		Resource = stream.LoadRoot() ?? throw new InvalidOperationException();
-		OneBoned = oneBoned;
 		RootNode = Root.CreateNode().Node;
 		RootNode.Name = Path.GetFileNameWithoutExtension(Resource.Name.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[^1]);
 		Scale = 1 / Math.Max(1, Resource.ArtToolInfo.UnitsPerMeter);
@@ -100,7 +99,8 @@ public sealed class GrannyGLTF : IDisposable {
 	}
 
 
-	public bool OneBoned { get; set; }
+	public bool OneBoned { get; set; } = true;
+	public bool GenerateNormals { get; set; } = true;
 	public Granny2File File { get; }
 	public GrannyFileRoot Resource { get; }
 	public GL.Root Root { get; } = new();
@@ -344,7 +344,7 @@ public sealed class GrannyGLTF : IDisposable {
 
 		var normal = alloc.Normal;
 		var hasNormal = (attributePresence & VertexAttributePresence.Normal) != 0;
-		if (!hasNormal && (attributePresence & VertexAttributePresence.Tangent) != 0) {
+		if (!hasNormal && GenerateNormals) {
 			if (type == GL.AccessorComponentType.UnsignedInt) {
 				CalculateNormals<uint>(ref normal, alloc.Position, faces);
 			} else {
