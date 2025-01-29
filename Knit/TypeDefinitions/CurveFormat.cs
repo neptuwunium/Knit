@@ -1,4 +1,4 @@
-// SPDX-FileCopyrightText: 2025 Legiayayana, 2017-2025 Norbyte
+// SPDX-FileCopyrightText: 2025 Legiayayana (Knit, EUPL-1.2), 2017-2025 Norbyte (LSLib, MIT)
 //
 // SPDX-License-Identifier: MIT
 
