@@ -1,6 +1,6 @@
-// SPDX-FileCopyrightText: 2025 Legiayayana
+// SPDX-FileCopyrightText: 2025 Legiayayana, 2017-2025 Norbyte
 //
-// SPDX-License-Identifier: EUPL-1.2
+// SPDX-License-Identifier: MIT
 
 namespace Knit.TypeDefinitions;
 

@@ -21,5 +21,5 @@ public record struct Transform {
 	public Quaternion Rotation { get; set; }
 	public Matrix3x3 ShearMatrix { get; set; }
 
-	public Vector3 Scale => new(ShearMatrix.M11, ShearMatrix.M22, ShearMatrix.M33);
+	public Vector3 Scale => ShearMatrix.ExtractScale();
 }

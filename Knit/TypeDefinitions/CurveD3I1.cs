@@ -8,13 +8,13 @@ using System.Runtime.InteropServices;
 
 namespace Knit.TypeDefinitions;
 
-public class CurveD9I3<T> : CurveValue where T : unmanaged, INumberBase<T> {
+public class CurveD3I1<T> : CurveValue where T : unmanaged, INumberBase<T> {
 	[GrannyMember("OneOverKnotScaleTrunc")] public ushort OneOverKnotScale { get; set; }
-	public Vector3 ControlScales { get; set; }
-	public Vector3 ControlOffsets { get; set; }
+	public Vector3 ControlScale { get; set; }
+	public Vector3 ControlOffset { get; set; }
 	public T[] KnotsControls { get; set; } = [];
 
-	public override CurveDimension Dimension => CurveDimension.ScaleShear;
+	public override CurveDimension Dimension => CurveDimension.Position;
 	public override int Frames => KnotsControls.Length / 4;
 
 	public override void Decompress(out List<float> timestamps, out List<Vector3> positions, out List<Quaternion> rotations, out List<Matrix3x3> scales) {
@@ -27,14 +27,9 @@ public class CurveD9I3<T> : CurveValue where T : unmanaged, INumberBase<T> {
 		var compressedTime = KnotsControls.AsSpan(0, frames);
 		var basis = MemoryMarshal.Cast<T, AnyVector3<T>>(KnotsControls.AsSpan(frames));
 
-		for (var i = 0; i < frames; ++i) {
+		for (var i = 0; i < frames; i++) {
 			timestamps.Add(float.CreateChecked(compressedTime[i]) / scale);
-			var vec = basis[i].ToVec() * ControlScales + ControlOffsets;
-			scales.Add(new Matrix3x3 {
-				M11 = vec.X,
-				M22 = vec.Y,
-				M33 = vec.Z,
-			});
+			positions.Add(basis[i].ToVec() * ControlScale + ControlOffset);
 		}
 	}
 }

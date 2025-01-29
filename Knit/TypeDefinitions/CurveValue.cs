@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: EUPL-1.2
 
+using System.Numerics;
 using System.Runtime.InteropServices;
 using Knit.Meta;
 
@@ -9,12 +10,13 @@ namespace Knit.TypeDefinitions;
 
 public abstract class CurveValue : IGrannyType {
 	public CurveDataHeader Header { get; set; }
-	[GrannyIgnoreMember] public string Type { get; set; } = "Curve";
+
+	public abstract int Frames { get; }
+	public abstract CurveDimension Dimension { get; }
 
 	public virtual bool Visit(Granny2File file, string name, IGranny2TypeDefinition typeInfo, SpanPointer objectLocation) {
 		if (name.StartsWith("CurveDataHeader_")) {
 			Header = MemoryMarshal.Read<CurveDataHeader>(objectLocation);
-			Type = name[16..];
 			return true;
 		}
 
@@ -39,10 +41,17 @@ public abstract class CurveValue : IGrannyType {
 			       "CurveDataHeader_D9I3K16uC16u" => typeof(CurveD9I3<ushort>),
 			       "CurveDataHeader_D9I1K8uC8u" => typeof(CurveD9I1<byte>),
 			       "CurveDataHeader_D9I3K8uC8u" => typeof(CurveD9I3<byte>),
-			       "CurveDataHeader_D3I1K32fC32f" => typeof(CurveD9I3<float>),
-			       "CurveDataHeader_D3I1K16uC16u" => typeof(CurveD9I3<ushort>),
-			       "CurveDataHeader_D3I1K8uC8u" => typeof(CurveD9I3<byte>),
-			       _ => typeof(CurveFallback),
+			       "CurveDataHeader_D3I1K32fC32f" => typeof(CurveD3I1<float>),
+			       "CurveDataHeader_D3I1K16uC16u" => typeof(CurveD3I1<ushort>),
+			       "CurveDataHeader_D3I1K8uC8u" => typeof(CurveD3I1<byte>),
+			       _ => typeof(CurveDX32F),
 		       };
+	}
+
+	public virtual void Decompress(out List<float> timestamps, out List<Vector3> positions, out List<Quaternion> rotations, out List<Matrix3x3> scales) {
+		positions = [];
+		rotations = [];
+		scales = [];
+		timestamps = [];
 	}
 }

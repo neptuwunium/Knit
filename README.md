@@ -23,3 +23,5 @@ Due to Granny's extensible nature, it's better to find a specialized parser for 
 - [opengr2](https://github.com/arves100/opengr2) (MPL-2.0) - Oodle decompression
 - [pybg3](https://github.com/eiz/pybg3) (MIT) - BitKnit decompression
 - [LSLib](https://github.com/Norbyte/lslib) (MIT) - Reference for Animations
+
+The related code is appropriately sublicensed as their parent license.
