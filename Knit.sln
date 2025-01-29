@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Knit.glTF", "Knit.glTF\Knit
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DragonLib", "DragonLib\DragonLib\DragonLib.csproj", "{4DF58E79-FDBB-44A7-9479-58D447D01F19}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Libraries", "Libraries", "{3790FC28-2B76-48B0-86A7-7243284F99A3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -48,5 +50,9 @@ Global
 		{4DF58E79-FDBB-44A7-9479-58D447D01F19}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4DF58E79-FDBB-44A7-9479-58D447D01F19}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4DF58E79-FDBB-44A7-9479-58D447D01F19}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{4DF58E79-FDBB-44A7-9479-58D447D01F19} = {3790FC28-2B76-48B0-86A7-7243284F99A3}
+		{3D94F360-050C-48DB-9E7D-FAB0A2C1A56D} = {3790FC28-2B76-48B0-86A7-7243284F99A3}
 	EndGlobalSection
 EndGlobal
