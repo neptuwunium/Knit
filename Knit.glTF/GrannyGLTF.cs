@@ -35,18 +35,9 @@ public sealed class GrannyGLTF : IDisposable {
 			CreateModel(model);
 		}
 
-	#if DEBUG
 		foreach (var animation in Resource.Animations) {
-			// todo.
-			foreach (var track in animation.TrackGroups) {
-				foreach (var transform in track.TransformTracks) {
-					transform.PositionCurve!.Data!.Decompress(out var tP, out var p, out _, out _);
-					transform.OrientationCurve!.Data!.Decompress(out var tR, out _, out var r, out _);
-					transform.ScaleCurve!.Data!.Decompress(out var tS, out _, out _, out var s);
-				}
-			}
+			CreateAnimation(animation);
 		}
-	#endif
 	}
 
 	public GrannyGLTFOptions ExportOptions { get; }
@@ -59,7 +50,7 @@ public sealed class GrannyGLTF : IDisposable {
 	public Dictionary<string, int> MaterialMap { get; } = [];
 	public Dictionary<VertexData, Dictionary<string, int>> VertexMap { get; } = [];
 	public Dictionary<string, int> TextureMap { get; } = [];
-	public Dictionary<int, Dictionary<string, int>> BoneMap { get; } = [];
+	public Dictionary<int, Dictionary<string, (int Id, GL.Node Node)>> BoneMap { get; } = [];
 	public Dictionary<string, int> SkeletonMap { get; } = [];
 	public Dictionary<string, int> AnimationMap { get; } = [];
 
@@ -88,7 +79,7 @@ public sealed class GrannyGLTF : IDisposable {
 		skin.Name = skeleton.Name;
 		var matrices = new Matrix4x4[skeleton.Bones.Count];
 		var hierarchy = new List<GL.Node>();
-		var boneMap = new Dictionary<string, int>();
+		var boneMap = new Dictionary<string, (int Id, GL.Node Node)>();
 
 		for (var index = 0; index < skeleton.Bones.Count; index++) {
 			var boneData = skeleton.Bones[index];
@@ -103,7 +94,7 @@ public sealed class GrannyGLTF : IDisposable {
 			}
 
 			skin.Joints.Add(boneId);
-			boneMap[boneData.Name] = hierarchy.Count;
+			boneMap[boneData.Name] = (hierarchy.Count, bone);
 			hierarchy.Add(bone);
 			matrices[index] = boneData.InverseTransform * Matrix4x4.CreateScale(Scale);
 			boneData.Transform.ToGLTF(bone, Scale);
@@ -132,6 +123,112 @@ public sealed class GrannyGLTF : IDisposable {
 		}
 	}
 
+	public void CreateAnimation(Animation animation) {
+		var (animNode, _) = Root.CreateAnimation();
+		animNode.Name = animation.Name;
+
+		foreach (var trackGroup in animation.TrackGroups) {
+			if (!SkeletonMap.TryGetValue(trackGroup.Name, out var skeletonId)) {
+				continue;
+			}
+
+			if (!BoneMap.TryGetValue(skeletonId, out var boneMap)) {
+				continue;
+			}
+
+			foreach (var track in trackGroup.TransformTracks) {
+				if (!boneMap.TryGetValue(track.Name, out var pair)) {
+					continue;
+				}
+
+				var bone = pair.Node;
+
+				if (track.OrientationCurve?.Data != null) {
+					var sampler = CreateRotationTrack(animNode, bone, track.OrientationCurve.Data, (trackGroup.Transform.Flags & XFormFlags.HasRotation) != 0 ? trackGroup.Transform.Rotation : Quaternion.Identity);
+					animNode.CreateChannel(sampler, bone, GL.AnimationChannelPath.rotation);
+				}
+
+				if (track.PositionCurve?.Data != null) {
+					var sampler = CreatePositionTrack(animNode, track.PositionCurve.Data, (trackGroup.Transform.Flags & XFormFlags.HasPosition) != 0 ? trackGroup.Transform.Position : Vector3.Zero);
+					animNode.CreateChannel(sampler, bone, GL.AnimationChannelPath.translation);
+				}
+
+				if (track.ScaleCurve?.Data != null) {
+					var sampler = CreateScaleTrack(animNode, bone, track.ScaleCurve.Data, (trackGroup.Transform.Flags & XFormFlags.HasScaleMatrix) != 0 ? trackGroup.Transform.ShearMatrix : Matrix3x3.Identity);
+					animNode.CreateChannel(sampler, bone, GL.AnimationChannelPath.scale);
+				}
+			}
+		}
+	}
+
+	private int CreatePositionTrack(GL.Animation anim, CurveValue curve, Vector3 rest) {
+		List<float> time;
+		List<Vector3> values;
+		if (curve is CurveIdentity) {
+			time = [0.0f];
+			values = [rest];
+		} else {
+			curve.Decompress(out time, out values, out _, out _);
+		}
+
+		var points = Math.Min(time.Count, values.Count);
+		var timeAccessor = CreateTimeTrack(curve, time[..points]);
+
+		Span<Vector3> vec = stackalloc Vector3[points];
+		values[..points].CopyTo(vec);
+
+		return anim.CreateSampler(timeAccessor, GL.AnimationInterpolation.LINEAR, Root.CreateAccessor(vec, Buffer, GL.BufferViewTarget.ArrayBuffer, GL.AccessorType.VEC3, GL.AccessorComponentType.Float).Id).Id;
+	}
+
+	private int CreateRotationTrack(GL.Animation anim, GL.Node target, CurveValue curve, Quaternion rest) {
+		List<float> time;
+		List<Quaternion> values;
+		if (curve is CurveIdentity) {
+			time = [0.0f];
+			values = [rest];
+		} else {
+			curve.Decompress(out time, out _, out values, out _);
+		}
+
+		var points = Math.Min(time.Count, values.Count);
+		var timeAccessor = CreateTimeTrack(curve, time[..points]);
+
+		Span<Quaternion> vec = stackalloc Quaternion[values.Count];
+		values[..points].CopyTo(vec);
+
+		return anim.CreateSampler(timeAccessor, GL.AnimationInterpolation.LINEAR, Root.CreateAccessor(vec, Buffer, GL.BufferViewTarget.ArrayBuffer, GL.AccessorType.VEC4, GL.AccessorComponentType.Float).Id).Id;
+	}
+
+	private int CreateScaleTrack(GL.Animation anim, GL.Node target, CurveValue curve, Matrix3x3 rest) {
+		List<float> time;
+		List<Vector3> values;
+		if (curve is CurveIdentity) {
+			time = [0.0f];
+			values = [rest.ExtractScale()];
+		} else {
+			curve.Decompress(out time, out _, out _, out var scales);
+			values = new List<Vector3>(scales.Count);
+			foreach (var scale in scales) {
+				values.Add(scale.ExtractScale());
+			}
+		}
+
+		var points = Math.Min(time.Count, values.Count);
+
+		var timeAccessor = CreateTimeTrack(curve, time[..points]);
+
+		Span<Vector3> vec = stackalloc Vector3[values.Count];
+		values[..points].CopyTo(vec);
+
+		return anim.CreateSampler(timeAccessor, GL.AnimationInterpolation.LINEAR, Root.CreateAccessor(vec, Buffer, GL.BufferViewTarget.ArrayBuffer, GL.AccessorType.VEC3, GL.AccessorComponentType.Float).Id).Id;
+	}
+
+	private int CreateTimeTrack(CurveValue curve, List<float> timestamps) {
+		Span<float> time = stackalloc float[timestamps.Count];
+		timestamps.CopyTo(time);
+		return Root.CreateAccessor(time, Buffer, GL.BufferViewTarget.ArrayBuffer, GL.AccessorType.SCALAR, GL.AccessorComponentType.Float).Id;
+	}
+
 	public int CreateMesh(Mesh mesh, int? skinId, GL.Node parentNode) {
 		if (MeshMap.TryGetValue(mesh.Name, out var id)) {
 			return id;
@@ -150,7 +247,7 @@ public sealed class GrannyGLTF : IDisposable {
 		return meshId;
 	}
 
-	public int? CreatePrimitive(TriTopology topology, VertexData vertexData, List<Material?> materials, List<MeshBone> bones, Dictionary<string, int> boneMap) {
+	public int? CreatePrimitive(TriTopology topology, VertexData vertexData, List<Material?> materials, List<MeshBone> bones, Dictionary<string, (int Id, GL.Node Node)> boneMap) {
 		var (mesh, meshId) = Root.CreateMesh();
 
 		Span<byte> bytes;
@@ -206,7 +303,7 @@ public sealed class GrannyGLTF : IDisposable {
 		return id;
 	}
 
-	public Dictionary<string, int> CreateVertexAttributes(VertexData vertexData, Span<byte> faces, List<MeshBone> bones, Dictionary<string, int> boneMap, GL.AccessorComponentType type) {
+	public Dictionary<string, int> CreateVertexAttributes(VertexData vertexData, Span<byte> faces, List<MeshBone> bones, Dictionary<string, (int Id, GL.Node Node)> boneMap, GL.AccessorComponentType type) {
 		if (VertexMap.TryGetValue(vertexData, out var attributes)) {
 			return attributes;
 		}
@@ -260,7 +357,7 @@ public sealed class GrannyGLTF : IDisposable {
 				var modelIndices = MemoryMarshal.Cast<byte, short>(alloc.Joint[(index * 8)..]);
 				var seenIds = new HashSet<int>();
 				for (var boneEntry = 0; boneEntry < Math.Min(vertices[index].ReferencedBoneCount, 4); ++boneEntry) {
-					var boneId = boneMap[bones[localIndices[boneEntry]].Name];
+					var boneId = boneMap[bones[localIndices[boneEntry]].Name].Id;
 					if (seenIds.Add(boneId) || (attributePresence & VertexAttributePresence.BoneWeights) != 0) {
 						modelIndices[boneEntry] = (short) boneId;
 					} else {
@@ -349,7 +446,7 @@ public sealed class GrannyGLTF : IDisposable {
 			attributes["TEXCOORD_7"] = Root.CreateAccessor(alloc.UV7, Buffer, GL.BufferViewTarget.ArrayBuffer, GL.AccessorType.VEC2, GL.AccessorComponentType.Float, 8, vertices.Length).Id;
 		}
 
-		if (bones.Count > 0 && boneMap.Count > 0 && (attributePresence & VertexAttributePresence.BoneIndices) != 0) {
+		if (bones.Count > 0 && BoneMap.Count > 0 && (attributePresence & VertexAttributePresence.BoneIndices) != 0) {
 			attributes["JOINTS_0"] = Root.CreateAccessor(alloc.Joint, Buffer, GL.BufferViewTarget.ArrayBuffer, GL.AccessorType.VEC4, GL.AccessorComponentType.UnsignedShort, 8, vertices.Length).Id;
 			attributes["WEIGHTS_0"] = Root.CreateAccessor(alloc.Weight, Buffer, GL.BufferViewTarget.ArrayBuffer, GL.AccessorType.VEC4, GL.AccessorComponentType.Float, 16, vertices.Length).Id;
 		}
