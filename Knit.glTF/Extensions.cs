@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: EUPL-1.2
 
+using System.Numerics;
 using GLTF.Scaffold;
 using Knit.TypeDefinitions;
 
@@ -19,6 +20,8 @@ public static class Extensions {
 
 		if ((transform.Flags & XFormFlags.HasScaleMatrix) != 0) {
 			node.Scale = (transform.Scale * scale).ToGLTF();
+		} else if (Math.Abs(1.0f - scale) > 0.0001f) {
+			node.Scale = new Vector3(scale).ToGLTF();
 		}
 	}
 }
