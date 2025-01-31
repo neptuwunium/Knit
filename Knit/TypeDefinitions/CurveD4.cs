@@ -30,7 +30,7 @@ public class CurveD4<T> : CurveValue where T : unmanaged, IBinaryNumber<T>, IShi
 		var dataB = int.CreateChecked(b & bitMaskUnder) * scales[swizzle3] + offsets[swizzle3];
 		var dataC = int.CreateChecked(c & bitMaskUnder) * scales[swizzle4] + offsets[swizzle4];
 
-		var dataD = (float) Math.Sqrt(1 - int.CreateChecked(dataA * dataA + dataB * dataB + dataC * dataC));
+		var dataD = (float) Math.Sqrt(1 - (dataA * dataA + dataB * dataB + dataC * dataC));
 		if ((a & bitMask) != T.Zero) {
 			dataD = -dataD;
 		}
