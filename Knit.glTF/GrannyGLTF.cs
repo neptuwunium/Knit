@@ -166,9 +166,15 @@ public sealed class GrannyGLTF : IDisposable {
 		List<Vector3> values;
 		if (curve is CurveIdentity) {
 			time = [0.0f];
-			values = [rest];
+			values = [rest * Scale];
 		} else {
 			curve.Decompress(out time, out values, out _, out _);
+
+			if (Math.Abs(1.0f - Scale) > 0.0001f) {
+				for (var index = 0; index < values.Count; ++index) {
+					values[index] *= Scale;
+				}
+			}
 		}
 
 		var points = Math.Min(time.Count, values.Count);
@@ -204,12 +210,12 @@ public sealed class GrannyGLTF : IDisposable {
 		List<Vector3> values;
 		if (curve is CurveIdentity) {
 			time = [0.0f];
-			values = [rest.ExtractScale()];
+			values = [rest.ExtractScale() * Scale];
 		} else {
 			curve.Decompress(out time, out _, out _, out var scales);
 			values = new List<Vector3>(scales.Count);
 			foreach (var scale in scales) {
-				values.Add(scale.ExtractScale());
+				values.Add(scale.ExtractScale() * Scale);
 			}
 		}
 
