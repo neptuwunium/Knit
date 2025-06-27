@@ -15,6 +15,12 @@ public record struct Granny2Tag {
 	public uint Tag => RawTag & TagMask;
 	public bool IsRAD => (RawTag & IsRADMask) != 0;
 
+	public Granny2Tag(uint value) {
+		RawTag = value;
+	}
+
+	public Granny2Tag() { }
+
 	public static implicit operator uint(Granny2Tag tag) => tag.RawTag;
 
 	public static implicit operator Granny2Tag(uint tag) => new() {

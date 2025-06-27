@@ -25,7 +25,7 @@ public struct Granny2ExtraTags : IEquatable<Granny2ExtraTags>, IEquatable<Span<u
 	public bool Equals(Granny2ExtraTags other) => Equals((ReadOnlySpan<Granny2Tag>) other);
 	public bool Equals(Span<uint> other) => other.SequenceEqual(MemoryMarshal.Cast<Granny2Tag, uint>(this));
 	public bool Equals(ReadOnlySpan<uint> other) => other.SequenceEqual(MemoryMarshal.Cast<Granny2Tag, uint>(this));
-	public bool Equals(uint other) => ((ReadOnlySpan<Granny2Tag>) this).Contains(other);
+	public bool Equals(uint other) => ((ReadOnlySpan<Granny2Tag>) this).Contains(new Granny2Tag(other));
 	public bool Equals(Span<Granny2Tag> other) => other.SequenceEqual(this);
 	public bool Equals(ReadOnlySpan<Granny2Tag> other) => other.SequenceEqual(this);
 	public bool Equals(Granny2Tag other) => ((ReadOnlySpan<Granny2Tag>) this).Contains(other);
