@@ -6,9 +6,9 @@ SPDX-License-Identifier: EUPL-1.2
 
 # Knit
 
-A managed C# reader and decompressor for Gr2 files.
+A managed C# reader and decompressor for Gr2 files, with support to convert generic gr2 files to gltf.
 
-Due to Granny's extensible nature, it's better to find a specialized parser for a given game.
+However, due to Granny's extensible nature it's often better to find a specialized parser for a given game.
 
 ⚠️ This library will never support serializing new structures into granny files.
 
