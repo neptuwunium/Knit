@@ -10,14 +10,14 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Knit.TypeDefinitions;
-using GL = GLTF.Scaffold;
+using GL = Ceres;
 
 namespace Knit.glTF;
 
 public sealed class GrannyGLTF : IDisposable {
 	public GrannyGLTF(GrannyFileRoot resource, GrannyGLTFOptions options) {
 		Resource = resource;
-		RootNode = Root.CreateNode().Node;
+		RootNode = Root.CreateNode(resource.Name).Node;
 		ExportOptions = options;
 		if (Resource.Name.Length > 0) {
 			RootNode.Name = Path.GetFileNameWithoutExtension(Resource.Name.Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)[^1]);
@@ -73,7 +73,7 @@ public sealed class GrannyGLTF : IDisposable {
 			return id;
 		}
 
-		var (skin, skinId) = Root.CreateSkin();
+		var (skin, skinId) = Root.CreateSkin(skeleton.Name);
 		SkeletonMap[skeleton.Name] = skinId;
 
 		skin.Name = skeleton.Name;
@@ -87,10 +87,10 @@ public sealed class GrannyGLTF : IDisposable {
 			int boneId;
 
 			if (boneData.ParentIndex == -1) {
-				(bone, boneId) = RootNode.CreateNode(Root);
+				(bone, boneId) = RootNode.CreateNode(Root, boneData.Name);
 				skin.Skeleton = boneId;
 			} else {
-				(bone, boneId) = hierarchy[boneData.ParentIndex].CreateNode(Root);
+				(bone, boneId) = hierarchy[boneData.ParentIndex].CreateNode(Root, boneData.Name);
 			}
 
 			skin.Joints.Add(boneId);
@@ -98,7 +98,6 @@ public sealed class GrannyGLTF : IDisposable {
 			hierarchy.Add(bone);
 			matrices[index] = boneData.InverseTransform * Matrix4x4.CreateScale(Scale);
 			boneData.Transform.ToGLTF(bone, Scale);
-			bone.Name = boneData.Name;
 		}
 
 		skin.InverseBindMatrices = Root.CreateAccessor(matrices.AsSpan(), Buffer, null, GL.AccessorType.MAT4, GL.AccessorComponentType.Float, 0).Id;
@@ -108,11 +107,10 @@ public sealed class GrannyGLTF : IDisposable {
 	}
 
 	public void CreateModel(Model model) {
-		var (meshNode, _) = RootNode.CreateNode(Root);
+		var (meshNode, _) = RootNode.CreateNode(Root, model.Name);
 
 		int? skinId = model.Skeleton != null ? CreateSkeleton(model.Skeleton) : null;
 		model.Transform.ToGLTF(meshNode, Scale);
-		meshNode.Name = model.Name;
 
 		foreach (var binding in model.MeshBindings) {
 			if (binding.Mesh is not { PrimaryTopology: not null, PrimaryVertexData.Vertices.Length: > 0 }) {
@@ -124,8 +122,7 @@ public sealed class GrannyGLTF : IDisposable {
 	}
 
 	public void CreateAnimation(Animation animation) {
-		var (animNode, _) = Root.CreateAnimation();
-		animNode.Name = animation.Name;
+		var (animNode, _) = Root.CreateAnimation(animation.Name);
 
 		foreach (var trackGroup in animation.TrackGroups) {
 			if (!SkeletonMap.TryGetValue(trackGroup.Name, out var skeletonId)) {
@@ -244,17 +241,16 @@ public sealed class GrannyGLTF : IDisposable {
 			throw new InvalidOperationException();
 		}
 
-		var (meshNode, meshId) = parentNode.CreateNode(Root);
+		var (meshNode, meshId) = parentNode.CreateNode(Root, mesh.Name);
 		MeshMap[mesh.Name] = meshId;
-		meshNode.Name = mesh.Name;
 		meshNode.Skin = skinId;
-		meshNode.Mesh = CreatePrimitive(mesh.PrimaryTopology, mesh.PrimaryVertexData, mesh.MaterialBindings.Select(x => x.Material).ToList(), mesh.BoneBindings, skinId is { } _skinId ? BoneMap[_skinId] : []);
+		meshNode.Mesh = CreatePrimitive(mesh.Name, mesh.PrimaryTopology, mesh.PrimaryVertexData, mesh.MaterialBindings.Select(x => x.Material).ToList(), mesh.BoneBindings, skinId is { } _skinId ? BoneMap[_skinId] : []);
 
 		return meshId;
 	}
 
-	public int? CreatePrimitive(TriTopology topology, VertexData vertexData, List<Material?> materials, List<MeshBone> bones, Dictionary<string, (int Id, GL.Node Node)> boneMap) {
-		var (mesh, meshId) = Root.CreateMesh();
+	public int? CreatePrimitive(string name, TriTopology topology, VertexData vertexData, List<Material?> materials, List<MeshBone> bones, Dictionary<string, (int Id, GL.Node Node)> boneMap) {
+		var (mesh, meshId) = Root.CreateMesh(name);
 
 		Span<byte> bytes;
 		GL.AccessorComponentType type;
@@ -283,7 +279,7 @@ public sealed class GrannyGLTF : IDisposable {
 
 			var view = Root.CreateBufferView(bytes.Slice(group.Start * 3 * stride, group.Count * 3 * stride), Buffer, null, GL.BufferViewTarget.ElementArrayBuffer).Id;
 
-			prim.Indices = Root.CreateAccessor(view, group.Count * 3, 0, GL.AccessorType.SCALAR, type).Id;
+			prim.Indices = Root.CreateAccessor(view, group.Count * 3, 0, GL.AccessorType.SCALAR, type, null).Id;
 			prim.Material = CreateMaterial(materials.ElementAtOrDefault(group.MaterialIndex));
 
 			mesh.Primitives.Add(prim);
@@ -301,10 +297,8 @@ public sealed class GrannyGLTF : IDisposable {
 			return materialId;
 		}
 
-		var (mat, id) = Root.CreateMaterial();
+		var (mat, id) = Root.CreateMaterial(material.Name);
 		MaterialMap[material.Name] = id;
-
-		mat.Name = material.Name;
 		// todo.
 		return id;
 	}
@@ -388,8 +382,8 @@ public sealed class GrannyGLTF : IDisposable {
 		if ((attributePresence & VertexAttributePresence.Position) != 0) {
 			var (pos, id) = Root.CreateAccessor(alloc.Position, Buffer, GL.BufferViewTarget.ArrayBuffer, GL.AccessorType.VEC3, GL.AccessorComponentType.Float, 12, vertices.Length);
 			attributes["POSITION"] = id;
-			pos.Max = GL.Extensions.ToGLTF(maxPos);
-			pos.Min = GL.Extensions.ToGLTF(minPos);
+			pos.Max = GL.ExtensionHelpers.ToGLTF(maxPos);
+			pos.Min = GL.ExtensionHelpers.ToGLTF(minPos);
 		}
 
 		var normal = alloc.Normal;
@@ -494,6 +488,7 @@ public sealed class GrannyGLTF : IDisposable {
 		var bufferPath = Path.ChangeExtension(path, ".bin");
 		Root.Buffers ??= [];
 		Root.Buffers.Add(new GL.Buffer {
+			Name = Path.GetFileNameWithoutExtension(bufferPath),
 			ByteLength = Buffer.Length,
 			Uri = Path.GetFileName(bufferPath),
 		});

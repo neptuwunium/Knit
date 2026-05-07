@@ -2,9 +2,6 @@
 #
 # SPDX-License-Identifier: EUPL-1.2
 
-[submodule "glTFScaffold"]
-	path = glTFScaffold
-	url = https://github.com/yretenai/glTFScaffold.git
-[submodule "DragonLib"]
-	path = DragonLib
-	url = https://github.com/yretenai/DragonLib.git
+[submodule "Neptune"]
+	path = Neptune
+	url = https://github.com/neptuwunium/Neptune.git

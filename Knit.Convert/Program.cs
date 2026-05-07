@@ -2,8 +2,8 @@
 //
 // SPDX-License-Identifier: EUPL-1.2
 
-using DragonLib.CommandLine;
 using Knit.glTF;
+using Pluto.CommandLine;
 
 namespace Knit.Convert;
 
@@ -26,12 +26,7 @@ internal static class Program {
 	private static GrannyGLTFOptions ExportOptions { get; set; } = null!;
 
 	private static void Main() {
-		var flags = CommandLineFlagsParser.ParseFlags<ProgramFlags>();
-		if (flags == null) {
-			return;
-		}
-
-		Flags = flags;
+		Flags = CommandLineFlagsParser.ParseFlags<ProgramFlags>();
 		ExportOptions = new GrannyGLTFOptions {
 			OneBoned = Flags.OneBone,
 			GenerateNormals = Flags.GenerateNormals,

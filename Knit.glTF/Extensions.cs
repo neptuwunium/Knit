@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 
 using System.Numerics;
-using GLTF.Scaffold;
+using Ceres;
 using Knit.TypeDefinitions;
 
 namespace Knit.glTF;

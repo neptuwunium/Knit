@@ -1,0 +1,16 @@
+<!--
+SPDX-FileCopyrightText: 2025 Legiayayana
+
+SPDX-License-Identifier: EUPL-1.2
+-->
+
+<Solution>
+  <Folder Name="/Libraries/">
+    <Project Path="Neptune/Ceres/Ceres.csproj" />
+    <Project Path="Neptune/Pluto/Pluto.csproj" />
+  </Folder>
+  <Project Path="Knit.Convert/Knit.Convert.csproj" />
+  <Project Path="Knit.Diagnostics/Knit.Diagnostics.csproj" />
+  <Project Path="Knit.glTF/Knit.glTF.csproj" />
+  <Project Path="Knit/Knit.csproj" />
+</Solution>
