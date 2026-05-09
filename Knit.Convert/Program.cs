@@ -4,6 +4,7 @@
 
 using Knit.glTF;
 using Pluto.CommandLine;
+using Pluto.IO.FileSystem;
 
 namespace Knit.Convert;
 
@@ -33,19 +34,8 @@ internal static class Program {
 			Rescale = Flags.Rescale,
 		};
 
-		foreach (var arg in Flags.Paths) {
-			var fileInfo = new FileInfo(arg);
-
-			if ((fileInfo.Attributes & FileAttributes.Directory) != 0) {
-				var dirInfo = new DirectoryInfo(arg);
-				if (dirInfo.Exists) {
-					foreach (var file in dirInfo.EnumerateFiles("*.gr2", SearchOption.AllDirectories)) {
-						ProcessFile(file.FullName);
-					}
-				}
-			} else if (fileInfo.Exists) {
-				ProcessFile(fileInfo.FullName);
-			}
+		foreach (var arg in new FileEnumerator(Flags.Paths, new EnumerationOptions { RecurseSubdirectories = true }, "*.gr2")) {
+			ProcessFile(arg);
 		}
 	}
 

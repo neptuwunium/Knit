@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: EUPL-1.2
 
+using Pluto.IO;
+
 namespace Knit.Meta;
 
 public interface IGranny2TypeDefinition {

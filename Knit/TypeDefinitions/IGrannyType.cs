@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 
 using Knit.Meta;
+using Pluto.IO;
 
 namespace Knit.TypeDefinitions;
 

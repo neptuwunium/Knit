@@ -13,6 +13,8 @@ using System.Text;
 using Knit.Compression;
 using Knit.Meta;
 using Knit.TypeDefinitions;
+using Pluto.IO;
+using Pluto.IO.Binary;
 
 namespace Knit;
 
@@ -31,18 +33,17 @@ public sealed class Granny2File : IDisposable {
 			throw new NotSupportedException();
 		}
 
-		HeaderData = MemoryPool<byte>.Shared.Rent(header.HeaderSize);
-		var headerData = HeaderData.Memory[..header.HeaderSize];
-		var headerDataSpan = headerData.Span;
+		HeaderData = new RentedArray<byte>(header.HeaderSize);
+		var headerData = HeaderData.Span[..header.HeaderSize];
 		stream.Position = 0;
-		stream.ReadExactly(headerDataSpan);
+		stream.ReadExactly(headerData);
 
 		if (header.ShouldConvertEndianness) {
-			headerDataSpan.Reverse32();
+			headerData.Reverse32();
 		}
 
-		FileInfo = MemoryMarshal.Read<Granny2FileInfo>(headerDataSpan[Unsafe.SizeOf<Granny2Header>()..]);
-		Sections = HeaderData.Memory[(Unsafe.SizeOf<Granny2Header>() + FileInfo.Sections.Offset)..].Cast<Granny2Section>()[..FileInfo.Sections.Count];
+		FileInfo = MemoryMarshal.Read<Granny2FileInfo>(headerData[Unsafe.SizeOf<Granny2Header>()..]);
+		Sections = new UnownedCovariantArray<Granny2Section>(HeaderData, Unsafe.SizeOf<Granny2Header>() + FileInfo.Sections.Offset, FileInfo.Sections.Count);
 		SectionBaseAddress = ArrayPool<int>.Shared.Rent(FileInfo.Sections.Count);
 
 		if (!FileInfo.IsSupported) {
@@ -51,21 +52,21 @@ public sealed class Granny2File : IDisposable {
 		}
 
 		if (softLoad) {
-			FileData = MemoryPool<byte>.Shared.Rent(1);
+			FileData = RentedArray<byte>.Empty;
 			return;
 		}
 
 		var totalSize = 0;
-		for (var index = 0; index < Sections.Span.Length; index++) {
+		var sectionsSpan = Sections.Span;
+		for (var index = 0; index < sectionsSpan.Length; index++) {
 			SectionBaseAddress[index] = totalSize;
-			var section = Sections.Span[index];
-			totalSize += section.UncompressedSize;
+			totalSize += sectionsSpan[index].UncompressedSize;
 		}
 
-		FileData = MemoryPool<byte>.Shared.Rent(totalSize);
+		FileData = new RentedArray<byte>(totalSize);
 		var cursor = 0;
-		var fileData = FileData.Memory.Span;
-		foreach (var section in Sections.Span) {
+		var fileData = FileData.Span;
+		foreach (var section in sectionsSpan) {
 			if (section.IsEmpty) {
 				continue;
 			}
@@ -77,8 +78,8 @@ public sealed class Granny2File : IDisposable {
 					if (section.Compression is Granny2CompressionType.None) {
 						stream.ReadExactly(target);
 					} else {
-						using var compressedPool = MemoryPool<byte>.Shared.Rent(section.Data.Count);
-						var compressed = compressedPool.Memory.Span[..section.Data.Count];
+						using var compressedPool = new RentedArray<byte>(section.Data.Count);
+						var compressed = compressedPool.Span[..section.Data.Count];
 						stream.ReadExactly(compressed);
 
 						switch (section.Compression) {
@@ -102,8 +103,8 @@ public sealed class Granny2File : IDisposable {
 			}
 		}
 
-		for (var index = 0; index < Sections.Span.Length; index++) {
-			var section = Sections.Span[index];
+		for (var index = 0; index < sectionsSpan.Length; index++) {
+			var section = sectionsSpan[index];
 			if (section.IsEmpty) {
 				continue;
 			}
@@ -111,7 +112,7 @@ public sealed class Granny2File : IDisposable {
 			if (header.ShouldConvertEndianness) {
 				stream.Position = section.MarshalledFixup.Offset;
 				using var marshalledFixups = ReadFixups<Granny2MarshalledFixup>(stream, section.Compression >= Granny2CompressionType.BitKnit1, section.MarshalledFixup.Count);
-				var marshalledFixupsSpan = marshalledFixups.Memory.Span[..section.MarshalledFixup.Count];
+				var marshalledFixupsSpan = marshalledFixups.Span[..section.MarshalledFixup.Count];
 				foreach (var marshal in marshalledFixupsSpan) {
 					var objectLocation = new SpanPointer(fileData, Dereference((Granny2SectionId) index, marshal.ObjectOffset));
 					var typeLocation = new SpanPointer(fileData, Dereference(marshal.TypeLocation));
@@ -121,7 +122,7 @@ public sealed class Granny2File : IDisposable {
 
 			stream.Position = section.Fixup.Offset;
 			using var fixups = ReadFixups<Granny2Fixup>(stream, section.Compression >= Granny2CompressionType.BitKnit1, section.Fixup.Count);
-			var fixupsSpan = fixups.Memory.Span[..section.Fixup.Count];
+			var fixupsSpan = fixups.Span[..section.Fixup.Count];
 			foreach (var fixup in fixupsSpan) {
 				MemoryMarshal.Write(Resolve(Dereference((Granny2SectionId) index, fixup.FromOffset)), Dereference(fixup.To));
 			}
@@ -130,11 +131,11 @@ public sealed class Granny2File : IDisposable {
 
 	public Granny2Header Header { get; }
 	public Granny2FileInfo FileInfo { get; }
-	public Memory<Granny2Section> Sections { get; }
+	public IRentedArray<Granny2Section> Sections { get; }
 	public int[] SectionBaseAddress { get; }
 
-	public IMemoryOwner<byte> HeaderData { get; }
-	public IMemoryOwner<byte> FileData { get; }
+	public RentedArray<byte> HeaderData { get; }
+	public RentedArray<byte> FileData { get; }
 
 	public Func<string, Type?>? TypeResolver { get; set; }
 #if DEBUG
@@ -147,16 +148,16 @@ public sealed class Granny2File : IDisposable {
 		ArrayPool<int>.Shared.Return(SectionBaseAddress);
 	}
 
-	private static IMemoryOwner<T> ReadFixups<T>(Stream stream, bool isBitKnit, int count) where T : struct {
-		IMemoryOwner<T>? fixups = null;
+	private static RentedArray<T> ReadFixups<T>(Stream stream, bool isBitKnit, int count) where T : struct {
+		RentedArray<T>? fixups = null;
 		try {
-			fixups = MemoryPool<T>.Shared.Rent(count);
-			var fixupsSpan = fixups.Memory.Span[..count].AsBytes();
+			fixups = new RentedArray<T>(count);
+			var fixupsSpan = fixups.Span[..count].AsBytes();
 			if (isBitKnit) {
 				var compressedSize = 0;
 				stream.ReadExactly(new Span<int>(ref compressedSize).AsBytes());
-				using var compressed = MemoryPool<byte>.Shared.Rent(compressedSize);
-				var compressedSpan = compressed.Memory.Span[..compressedSize];
+				using var compressed = new RentedArray<byte>(compressedSize);
+				var compressedSpan = compressed.Span[..compressedSize];
 				stream.ReadExactly(compressedSpan);
 				GrannyBitKnitCompression.Decompress(compressedSpan, fixupsSpan);
 			} else {
@@ -736,7 +737,7 @@ public sealed class Granny2File : IDisposable {
 
 	public int Dereference(Granny2Reference ptr) => Dereference(ptr.Section, ptr.Offset);
 	public int Dereference(Granny2SectionId section, int offset) => SectionBaseAddress[(int) section] + offset;
-	public SpanPointer Resolve(int address) => new(FileData.Memory.Span, address);
+	public SpanPointer Resolve(int address) => new(FileData.Span, address);
 	public SpanPointer Resolve(Granny2Reference ptr) => Resolve(Dereference(ptr));
 	public SpanPointer Resolve(Granny2SectionId section, int offset) => Resolve(Dereference(section, offset));
 
